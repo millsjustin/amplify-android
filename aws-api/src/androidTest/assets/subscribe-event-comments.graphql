@@ -1,6 +1,0 @@
-subscription SubscribeToEventComments($eventId: String!) {
-    subscribeToEventComments(eventId: $eventId) {
-        content
-    }
-}
-

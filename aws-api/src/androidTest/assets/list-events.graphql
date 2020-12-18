@@ -1,9 +1,0 @@
-query ListEvents {
-  listEvents {
-    items {
-      id
-      name
-    }
-  }
-}
-

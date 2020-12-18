@@ -1,8 +1,0 @@
-type Meeting @model {
-    id: ID!
-    name: String!
-    date: AWSDate
-    dateTime: AWSDateTime
-    time: AWSTime
-    timestamp: AWSTimestamp
-}
