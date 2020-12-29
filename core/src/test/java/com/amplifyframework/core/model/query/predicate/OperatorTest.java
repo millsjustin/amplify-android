@@ -30,13 +30,13 @@ public final class OperatorTest {
      */
     @Test
     public void testEqualOperator() {
-        final EqualQueryOperator numericalOperator = new EqualQueryOperator(123);
+        final EqualQueryOperator numericalOperator = new EqualQueryOperator<>(123);
 
         assertTrue(numericalOperator.evaluate(123));
         assertFalse(numericalOperator.evaluate(1234));
         assertFalse(numericalOperator.evaluate("123"));
 
-        final EqualQueryOperator stringOperator = new EqualQueryOperator("Hello");
+        final EqualQueryOperator stringOperator = new EqualQueryOperator<>("Hello");
 
         assertTrue(stringOperator.evaluate("Hello"));
         assertFalse(stringOperator.evaluate("HELLO"));
@@ -48,13 +48,13 @@ public final class OperatorTest {
      */
     @Test
     public void testNotEqualOperator() {
-        final NotEqualQueryOperator numericalOperator = new NotEqualQueryOperator(123);
+        final NotEqualQueryOperator numericalOperator = new NotEqualQueryOperator<>(123);
 
         assertTrue(numericalOperator.evaluate(124));
         assertTrue(numericalOperator.evaluate("123"));
         assertFalse(numericalOperator.evaluate(123));
 
-        final NotEqualQueryOperator stringOperator = new NotEqualQueryOperator("Hello");
+        final NotEqualQueryOperator stringOperator = new NotEqualQueryOperator<>("Hello");
 
         assertTrue(stringOperator.evaluate("World"));
         assertFalse(stringOperator.evaluate("Hello"));

@@ -19,15 +19,16 @@ import androidx.core.util.ObjectsCompat;
 
 /**
  * Represents a not equal condition with a target value for comparison.
+ * @param <T> type of value.
  */
-public final class NotEqualQueryOperator extends QueryOperator<Object> {
-    private final Object value;
+public final class NotEqualQueryOperator<T> extends QueryOperator<T> {
+    private final T value;
 
     /**
      * Constructs a not equal condition.
      * @param value the value to be used in the comparison
      */
-    NotEqualQueryOperator(Object value) {
+    NotEqualQueryOperator(T value) {
         super(Type.NOT_EQUAL);
         this.value = value;
     }
@@ -36,7 +37,7 @@ public final class NotEqualQueryOperator extends QueryOperator<Object> {
      * Returns the value to be used in the comparison.
      * @return the value to be used in the comparison
      */
-    public Object value() {
+    public T value() {
         return value;
     }
 
@@ -46,7 +47,7 @@ public final class NotEqualQueryOperator extends QueryOperator<Object> {
      * @param field the field value to operate on
      * @return evaluated result of the operator
      */
-    public boolean evaluate(Object field) {
+    public boolean evaluate(T field) {
         return !field.equals(value);
     }
 
@@ -57,7 +58,7 @@ public final class NotEqualQueryOperator extends QueryOperator<Object> {
         } else if (obj == null || getClass() != obj.getClass()) {
             return false;
         } else {
-            NotEqualQueryOperator op = (NotEqualQueryOperator) obj;
+            NotEqualQueryOperator<?> op = (NotEqualQueryOperator) obj;
 
             return ObjectsCompat.equals(type(), op.type()) &&
                     ObjectsCompat.equals(value(), op.value());

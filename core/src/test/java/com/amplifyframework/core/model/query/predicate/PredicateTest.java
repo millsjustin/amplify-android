@@ -52,7 +52,7 @@ public final class PredicateTest {
         QueryPredicateGroup expected = new QueryPredicateGroup(
                 QueryPredicateGroup.Type.AND,
                 Arrays.asList(
-                        new QueryPredicateOperation<>("id", new EqualQueryOperator("1234")),
+                        new QueryPredicateOperation<>("id", new EqualQueryOperator<>("1234")),
                         new QueryPredicateOperation<>("age", new GreaterThanQueryOperator<>(21))
                 ));
 
