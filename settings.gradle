@@ -32,3 +32,8 @@ include ':testmodels'
 include ':core-kotlin'
 include ':rxbindings'
 include ':aws-api-appsync'
+
+// Auth prototyping modules
+include ':auth-sample-app'
+include ':aws-auth'
+
