@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
 
@@ -222,9 +223,12 @@ public final class PersistentMutationOutboxTest {
             .build();
         PendingMutation<BlogOwner> deleteBillGates = PendingMutation.deletion(bill, schema);
         storage.save(converter.toRecord(deleteBillGates));
-        mutationOutbox.load().blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable loadCompletable = mutationOutbox.load();
 
-        TestObserver<Void> testObserver = mutationOutbox.remove(deleteBillGates.getMutationId()).test();
+        Completable removeCompletable = mutationOutbox.remove(deleteBillGates.getMutationId());
+
+        loadCompletable.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> testObserver = removeCompletable.test();
 
         testObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
         testObserver.assertNoErrors().assertComplete();
@@ -301,7 +305,7 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> existingCreation =
             PendingMutation.creation(modelInExistingMutation, schema);
         String existingCreationId = existingCreation.getMutationId().toString();
-        mutationOutbox.enqueue(existingCreation).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingCreation);
 
         // Act: try to create the blog owner again -- but there's already a pending creation
         BlogOwner modelInIncomingMutation = modelInExistingMutation.copyOfBuilder()
@@ -310,7 +314,11 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> incomingCreation =
             PendingMutation.creation(modelInIncomingMutation, schema);
         String incomingCreationId = incomingCreation.getMutationId().toString();
-        TestObserver<Void> enqueueObserver = mutationOutbox.enqueue(incomingCreation).test();
+        Completable secondMutation = mutationOutbox.enqueue(incomingCreation);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> enqueueObserver = secondMutation.test();
+
 
         // Assert: caused a failure.
         enqueueObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -343,7 +351,7 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> existingUpdate =
             PendingMutation.update(modelInExistingMutation, schema);
         String exitingUpdateId = existingUpdate.getMutationId().toString();
-        mutationOutbox.enqueue(existingUpdate).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingUpdate);
 
         // Act: try to CREATE tony again -- but isn't he already created, if there's an update?
         BlogOwner modelInIncomingMutation = modelInExistingMutation.copyOfBuilder()
@@ -352,7 +360,10 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> incomingCreation =
             PendingMutation.creation(modelInIncomingMutation, schema);
         String incomingCreationId = incomingCreation.getMutationId().toString();
-        TestObserver<Void> enqueueObserver = mutationOutbox.enqueue(incomingCreation).test();
+        Completable secondMutation = mutationOutbox.enqueue(incomingCreation);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> enqueueObserver = secondMutation.test();
 
         // Assert: caused a failure.
         enqueueObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -386,7 +397,7 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> existingDeletion =
             PendingMutation.deletion(modelInExistingMutation, schema);
         String existingDeletionId = existingDeletion.getMutationId().toString();
-        mutationOutbox.enqueue(existingDeletion).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingDeletion);
 
         // Act: try to create tony, but wait -- if we're already deleting him...
         BlogOwner modelInIncomingMutation = modelInExistingMutation.copyOfBuilder()
@@ -395,7 +406,10 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> incomingCreation =
             PendingMutation.creation(modelInIncomingMutation, schema);
         String incomingCreationId = incomingCreation.getMutationId().toString();
-        TestObserver<Void> enqueueObserver = mutationOutbox.enqueue(incomingCreation).test();
+        Completable secondMutation = mutationOutbox.enqueue(incomingCreation);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> enqueueObserver = secondMutation.test();
 
         // Assert: caused a failure.
         enqueueObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -428,7 +442,7 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> existingDeletion =
             PendingMutation.deletion(modelInExistingMutation, schema);
         String existingDeletionId = existingDeletion.getMutationId().toString();
-        mutationOutbox.enqueue(existingDeletion).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingDeletion);
 
         // Act: try to update tony, but wait ... aren't we deleting tony?
         BlogOwner modelInIncomingMutation = modelInExistingMutation.copyOfBuilder()
@@ -437,7 +451,10 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> incomingUpdate =
             PendingMutation.update(modelInIncomingMutation, schema);
         String incomingUpdateId = incomingUpdate.getMutationId().toString();
-        TestObserver<Void> enqueueObserver = mutationOutbox.enqueue(incomingUpdate).test();
+        Completable secondMutation = mutationOutbox.enqueue(incomingUpdate);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> enqueueObserver = secondMutation.test();
 
         // Assert: caused a failure.
         enqueueObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -470,7 +487,7 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> existingUpdate =
             PendingMutation.update(modelInExistingMutation, schema);
         String existingUpdateId = existingUpdate.getMutationId().toString();
-        mutationOutbox.enqueue(existingUpdate).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingUpdate);
 
         // Act: try to enqueue a new update mutation when there already is one
         BlogOwner modelInIncomingMutation = modelInExistingMutation.copyOfBuilder()
@@ -479,7 +496,10 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> incomingUpdate =
             PendingMutation.update(modelInIncomingMutation, schema, BlogOwner.NAME.eq("Papa Tony"));
         String incomingUpdateId = incomingUpdate.getMutationId().toString();
-        TestObserver<Void> enqueueObserver = mutationOutbox.enqueue(incomingUpdate).test();
+        Completable secondMutation = mutationOutbox.enqueue(incomingUpdate);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> enqueueObserver = secondMutation.test();
 
         // Assert: OK. The new mutation is accepted
         enqueueObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -537,7 +557,7 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> existingUpdate =
             PendingMutation.update(modelInExistingMutation, schema);
         String existingUpdateId = existingUpdate.getMutationId().toString();
-        mutationOutbox.enqueue(existingUpdate).blockingAwait();
+        Completable firstMutation = mutationOutbox.enqueue(existingUpdate);
 
         // Act: try to enqueue a new update mutation when there already is one
         BlogOwner modelInIncomingMutation = modelInExistingMutation.copyOfBuilder()
@@ -546,7 +566,10 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> incomingUpdate =
             PendingMutation.update(modelInIncomingMutation, schema);
         String incomingUpdateId = incomingUpdate.getMutationId().toString();
-        TestObserver<Void> enqueueObserver = mutationOutbox.enqueue(incomingUpdate).test();
+        Completable secondMutation = mutationOutbox.enqueue(incomingUpdate);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> enqueueObserver = secondMutation.test();
 
         // Assert: OK. The new mutation is accepted
         enqueueObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -588,7 +611,7 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> existingCreation =
             PendingMutation.creation(modelInExistingMutation, schema);
         String existingCreationId = existingCreation.getMutationId().toString();
-        mutationOutbox.enqueue(existingCreation).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingCreation);
 
         // Act: try to enqueue an update even whilst the creation is pending
         BlogOwner modelInIncomingMutation = modelInExistingMutation.copyOfBuilder()
@@ -597,7 +620,10 @@ public final class PersistentMutationOutboxTest {
         PendingMutation<BlogOwner> incomingUpdate =
             PendingMutation.update(modelInIncomingMutation, schema);
         String incomingUpdateId = incomingUpdate.getMutationId().toString();
-        TestObserver<Void> enqueueObserver = mutationOutbox.enqueue(incomingUpdate).test();
+        Completable secondMutation = mutationOutbox.enqueue(incomingUpdate);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        TestObserver<Void> enqueueObserver = secondMutation.test();
 
         // Assert: OK. The new mutation is accepted
         enqueueObserver.await(TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -645,11 +671,14 @@ public final class PersistentMutationOutboxTest {
             .build();
         PendingMutation<BlogOwner> existingCreation = PendingMutation.creation(joe, schema);
         String existingCreationId = existingCreation.getMutationId().toString();
-        mutationOutbox.enqueue(existingCreation).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingCreation);
 
         PendingMutation<BlogOwner> incomingDeletion = PendingMutation.deletion(joe, schema);
         String incomingDeletionId = incomingDeletion.getMutationId().toString();
-        mutationOutbox.enqueue(incomingDeletion).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable secondMutation = mutationOutbox.enqueue(incomingDeletion);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        secondMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         assertTrue(storage.query(PersistentRecord.class, Where.id(existingCreationId)).isEmpty());
         assertTrue(storage.query(PersistentRecord.class, Where.id(incomingDeletionId)).isEmpty());
@@ -671,11 +700,14 @@ public final class PersistentMutationOutboxTest {
             .build();
         PendingMutation<BlogOwner> exitingUpdate = PendingMutation.update(joe, schema);
         String existingUpdateId = exitingUpdate.getMutationId().toString();
-        mutationOutbox.enqueue(exitingUpdate).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(exitingUpdate);
 
         PendingMutation<BlogOwner> incomingDeletion = PendingMutation.deletion(joe, schema);
         String incomingDeletionId = incomingDeletion.getMutationId().toString();
-        mutationOutbox.enqueue(incomingDeletion).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable secondMutation = mutationOutbox.enqueue(incomingDeletion);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        secondMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // The original mutation ID is preserved.
         List<PendingMutation.PersistentRecord> existingMutationRecords =
@@ -719,16 +751,19 @@ public final class PersistentMutationOutboxTest {
         BlogOwner sammy = BlogOwner.builder()
             .name("Sammy Swanson")
             .build();
-        PendingMutation<BlogOwner> exitingDeletion = PendingMutation.deletion(sammy, schema);
+        PendingMutation<BlogOwner> existingDeletion = PendingMutation.deletion(sammy, schema);
         PendingMutation<BlogOwner> incomingDeletion = PendingMutation.deletion(sammy, schema);
-        assertNotEquals(exitingDeletion.getMutationId(), incomingDeletion.getMutationId());
+        assertNotEquals(existingDeletion.getMutationId(), incomingDeletion.getMutationId());
 
-        mutationOutbox.enqueue(exitingDeletion).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        mutationOutbox.enqueue(incomingDeletion).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(existingDeletion);
+        Completable secondMutation = mutationOutbox.enqueue(incomingDeletion);
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        secondMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // Existing record is still there
         List<PersistentRecord> existingMutationRecords =
-            storage.query(PersistentRecord.class, Where.id(exitingDeletion.getMutationId().toString()));
+            storage.query(PersistentRecord.class, Where.id(existingDeletion.getMutationId().toString()));
         assertEquals(1, existingMutationRecords.size());
 
         // Incoming is not present
@@ -737,7 +772,7 @@ public final class PersistentMutationOutboxTest {
         assertEquals(0, incomingMutationRecords.size());
 
         // Still a deletion, as the next outbox item
-        assertEquals(exitingDeletion, mutationOutbox.peek());
+        assertEquals(existingDeletion, mutationOutbox.peek());
     }
 
     /**
@@ -754,14 +789,16 @@ public final class PersistentMutationOutboxTest {
             .name("Tony Jon Swanssssssssson yee-haw!")
             .build();
         PendingMutation<BlogOwner> originalCreation = PendingMutation.creation(tonyWrongName, schema);
-        mutationOutbox.enqueue(originalCreation).blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable firstMutation = mutationOutbox.enqueue(originalCreation);
 
         // Update tony - we spelled his name wrong originally
         BlogOwner tonySpelledRight = tonyWrongName.copyOfBuilder()
             .name("Tony Jon (\"TJ\") Swanson")
             .build();
-        mutationOutbox.enqueue(PendingMutation.update(tonySpelledRight, schema))
-            .blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        Completable secondMutation = mutationOutbox.enqueue(PendingMutation.update(tonySpelledRight, schema));
+
+        firstMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        secondMutation.blockingAwait(TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // Assert: an event for the original creation, then another for the update
         eventsObserver.awaitCount(2)
