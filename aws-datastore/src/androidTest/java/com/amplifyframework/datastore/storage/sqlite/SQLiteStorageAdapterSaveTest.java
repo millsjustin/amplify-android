@@ -20,15 +20,19 @@ import android.util.Log;
 import com.amplifyframework.AmplifyException;
 import com.amplifyframework.core.model.Model;
 import com.amplifyframework.core.model.ModelSchema;
+import com.amplifyframework.core.model.query.Where;
 import com.amplifyframework.core.model.query.predicate.QueryPredicate;
 import com.amplifyframework.datastore.DataStoreException;
 import com.amplifyframework.datastore.StrictMode;
+import com.amplifyframework.datastore.appsync.ModelConverter;
 import com.amplifyframework.datastore.appsync.SerializedModel;
 import com.amplifyframework.datastore.storage.StorageItemChange;
 import com.amplifyframework.datastore.storage.SynchronousStorageAdapter;
 import com.amplifyframework.testmodels.commentsblog.AmplifyModelProvider;
 import com.amplifyframework.testmodels.commentsblog.Blog;
 import com.amplifyframework.testmodels.commentsblog.BlogOwner;
+import com.amplifyframework.testutils.random.RandomString;
+import com.amplifyframework.util.Immutable;
 
 import org.junit.After;
 import org.junit.Before;
@@ -41,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
 
@@ -294,29 +299,37 @@ public final class SQLiteStorageAdapterSaveTest {
      * @throws InterruptedException If interrupted while awaiting terminal result in test observer
      */
     @Test
-    public void saveOnlyUpdatesFieldsThatHaveChanged() throws AmplifyException, InterruptedException {
-        TestObserver<StorageItemChange<? extends Model>> observer = adapter.observe().test();
-
-        final BlogOwner john = BlogOwner.builder()
-                .name("John")
+    public void observingAnUpdateOnlyIncludesChangedFields() throws AmplifyException, InterruptedException {
+        // Create a BlogOwner.
+        final BlogOwner johnSmith = BlogOwner.builder()
+                .name("John Smith")
                 .wea("ther")
                 .build();
-        adapter.save(john);
+        adapter.save(johnSmith);
 
-        observer.await(5, TimeUnit.SECONDS);
+        // Start observing for changes
+        TestObserver<StorageItemChange<? extends Model>> observer = adapter.observe().test();
 
-        Map<String, Object> expectedData = new HashMap<>();
-        expectedData.put("id", john.getId());
-        expectedData.put("name", "John");
-        expectedData.put("wea", "ther");
+        // Update one field on the BlogOwner.
+        BlogOwner johnAdams = johnSmith.copyOfBuilder().name("John Adams").build();
 
-        SerializedModel expected = SerializedModel.builder()
-            .serializedData(expectedData)
-            .modelSchema(ModelSchema.fromModelClass(BlogOwner.class))
-            .build();
+        // The patch update functionality will only work for a SerializedModel, so convert to that and save it.
+        final SerializedModel serializedJohnAdams = SerializedModel.builder()
+                .serializedData(ModelConverter.toMap(johnAdams))
+                .modelSchema(ModelSchema.fromModelClass(BlogOwner.class))
+                .build();
+        adapter.save(serializedJohnAdams);
 
-        observer.assertValue(storageItemChange -> storageItemChange.item().equals(expected))
-            .assertNoErrors()
-            .assertComplete();
+        // Observe that the StorageItemChange contains an item with only the fields that changed (`id`, and `name`, but not `wea`)
+        Map<String, Object> serializedData = new HashMap<>();
+        serializedData.put("id", johnAdams.getId());
+        serializedData.put("name", "John Adams");
+        SerializedModel expectedItem = SerializedModel.builder()
+                .serializedData(serializedData)
+                .modelSchema(ModelSchema.fromModelClass(BlogOwner.class))
+                .build();
+        observer.await(2, TimeUnit.SECONDS);
+        observer.assertValueCount(1);
+        observer.assertValueAt(0, storageItemChange -> storageItemChange.item().equals(expectedItem));
     }
 }

@@ -21,6 +21,8 @@ import com.amplifyframework.AmplifyException;
 import com.amplifyframework.core.model.Model;
 import com.amplifyframework.datastore.DataStoreException;
 import com.amplifyframework.datastore.DataStoreItemChange;
+import com.amplifyframework.datastore.appsync.ModelConverter;
+import com.amplifyframework.datastore.appsync.SerializedModel;
 
 /**
  * Utility to map {@link StorageItemChange}s to the customer-visible type, {@link DataStoreItemChange}.
@@ -38,10 +40,14 @@ public final class ItemChangeMapper {
      */
     @SuppressWarnings("unchecked")
     public static <T extends Model> DataStoreItemChange<T> map(
-            @NonNull StorageItemChange<T> storageItemChange) throws DataStoreException {
+            @NonNull StorageItemChange<? extends Model> storageItemChange) throws DataStoreException {
+        Model item = storageItemChange.item();
+        if(item instanceof SerializedModel) {
+            item = ((SerializedModel) item).toModel();
+        }
         return DataStoreItemChange.<T>builder()
             .initiator(map(storageItemChange.initiator()))
-            .item(storageItemChange.item())
+            .item((T) item)
             .itemClass((Class<T>) storageItemChange.modelSchema().getModelClass())
             .type(map(storageItemChange.type()))
             .uuid(storageItemChange.changeId().toString())

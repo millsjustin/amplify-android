@@ -21,6 +21,7 @@ import androidx.annotation.Nullable;
 import com.amplifyframework.core.model.Model;
 import com.amplifyframework.core.model.ModelSchema;
 import com.amplifyframework.core.model.query.predicate.QueryPredicate;
+import com.amplifyframework.datastore.appsync.SerializedModel;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -37,6 +38,7 @@ public final class StorageItemChange<T extends Model> {
     private final Type type;
     private final QueryPredicate predicate;
     private final T item;
+    private final SerializedModel patchedItem;
     private final ModelSchema modelSchema;
 
     private StorageItemChange(
@@ -45,12 +47,14 @@ public final class StorageItemChange<T extends Model> {
             Type type,
             QueryPredicate predicate,
             T item,
+            SerializedModel patchedItem,
             ModelSchema modelSchema) {
         this.changeId = changeId;
         this.initiator = initiator;
         this.type = type;
         this.predicate = predicate;
         this.item = item;
+        this.patchedItem = patchedItem;
         this.modelSchema = modelSchema;
     }
 
@@ -99,6 +103,15 @@ public final class StorageItemChange<T extends Model> {
     @NonNull
     public T item() {
         return item;
+    }
+
+    /**
+     * Gets a SerializedModel containing only the fields that have changed.
+     * @return a SerializedModel containing only the fields that have changed.
+     */
+    @NonNull
+    public SerializedModel patchedItem() {
+        return patchedItem;
     }
 
     /**
@@ -183,6 +196,7 @@ public final class StorageItemChange<T extends Model> {
         private Type type;
         private QueryPredicate predicate;
         private T item;
+        private SerializedModel patchedItem;
         private ModelSchema modelSchema;
 
         /**
@@ -257,6 +271,16 @@ public final class StorageItemChange<T extends Model> {
         }
 
         /**
+         * Configures the patchedItem, a SerializedModel containing only the fields that changed.
+         * @param patchedItem Representation of the changes that occurred.
+         * @return Current Builder instance for fluent configuration chaining.
+         */
+        public Builder<T> patchedItem(@NonNull SerializedModel patchedItem) {
+            this.patchedItem = Objects.requireNonNull(patchedItem);
+            return this;
+        }
+
+        /**
          * Configures the schema of the item that changed.
          * @param modelSchema Schema of the item that changed
          * @return Current Builder instance for fluent configuration chaining
@@ -281,6 +305,7 @@ public final class StorageItemChange<T extends Model> {
                 Objects.requireNonNull(type),
                 Objects.requireNonNull(predicate),
                 Objects.requireNonNull(item),
+                Objects.requireNonNull(patchedItem),
                 Objects.requireNonNull(modelSchema)
             );
         }

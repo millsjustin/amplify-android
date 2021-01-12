@@ -37,6 +37,7 @@ import com.amplifyframework.core.model.query.Where;
 import com.amplifyframework.core.model.query.predicate.QueryPredicate;
 import com.amplifyframework.core.model.query.predicate.QueryPredicates;
 import com.amplifyframework.datastore.appsync.AppSyncClient;
+import com.amplifyframework.datastore.appsync.ModelConverter;
 import com.amplifyframework.datastore.appsync.SerializedModel;
 import com.amplifyframework.datastore.model.ModelProviderLocator;
 import com.amplifyframework.datastore.storage.ItemChangeMapper;
@@ -68,6 +69,9 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
     // manages the persistence of data on-device.
     private final LocalStorageAdapter sqliteStorageAdapter;
 
+    // Used for obtaining ModelSchema's from a model Class.
+    private final ModelSchemaRegistry modelSchemaRegistry;
+
     // A component which synchronizes data state between the
     // local storage adapter, and a remote API
     private final Orchestrator orchestrator;
@@ -88,6 +92,7 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
             @NonNull ApiCategory api,
             @Nullable DataStoreConfiguration userProvidedConfiguration) {
         this.sqliteStorageAdapter = SQLiteStorageAdapter.forModels(modelSchemaRegistry, modelProvider);
+        this.modelSchemaRegistry = modelSchemaRegistry;
         this.categoryInitializationsPending = new CountDownLatch(1);
         // Used to interrogate plugins, to understand if sync should be automatically turned on
         this.orchestrator = new Orchestrator(
@@ -322,7 +327,7 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
             @NonNull Consumer<DataStoreItemChange<T>> onItemSaved,
             @NonNull Consumer<DataStoreException> onFailureToSave) {
         start(() -> sqliteStorageAdapter.save(
-            item,
+            SerializedModel.create(item, modelSchemaRegistry.getModelSchemaForModelClass(item.getClass())),
             StorageItemChange.Initiator.DATA_STORE_API,
             predicate,
             itemSave -> {
@@ -357,7 +362,7 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
             @NonNull Consumer<DataStoreItemChange<T>> onItemDeleted,
             @NonNull Consumer<DataStoreException> onFailureToDelete) {
         start(() -> sqliteStorageAdapter.delete(
-            item,
+            SerializedModel.create(item, modelSchemaRegistry.getModelSchemaForModelClass(item.getClass())),
             StorageItemChange.Initiator.DATA_STORE_API,
             predicate,
             itemDeletion -> {

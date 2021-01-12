@@ -22,7 +22,12 @@ import androidx.core.util.ObjectsCompat;
 import com.amplifyframework.core.model.Model;
 import com.amplifyframework.core.model.ModelField;
 import com.amplifyframework.core.model.ModelSchema;
+import com.amplifyframework.util.GsonFactory;
+import com.amplifyframework.util.GsonObjectConverter;
 import com.amplifyframework.util.Immutable;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +41,13 @@ public final class SerializedModel implements Model {
     private final String modelId;
     private final Map<String, Object> serializedData;
     private final ModelSchema modelSchema;
+
+    public static <T extends Model> SerializedModel create(T model, ModelSchema modelSchema) {
+        return SerializedModel.builder()
+                .serializedData(ModelConverter.toMap(model))
+                .modelSchema(modelSchema)
+                .build();
+    }
 
     private SerializedModel(
             String modelId, Map<String, Object> serializedData, ModelSchema modelSchema) {
@@ -104,6 +116,14 @@ public final class SerializedModel implements Model {
             ", serializedData=" + serializedData +
             ", modelSchema=" + modelSchema +
             '}';
+    }
+
+    public Model toModel() {
+        if(SerializedModel.class.equals(modelSchema.getModelClass())) {
+            return this;
+        } else {
+            return ModelConverter.fromMap(serializedData, modelSchema.getModelClass());
+        }
     }
 
     @Override

@@ -40,6 +40,7 @@ import com.amplifyframework.core.model.query.predicate.QueryField;
 import com.amplifyframework.core.model.query.predicate.QueryPredicate;
 import com.amplifyframework.core.model.query.predicate.QueryPredicates;
 import com.amplifyframework.datastore.DataStoreException;
+import com.amplifyframework.datastore.appsync.ModelConverter;
 import com.amplifyframework.datastore.appsync.SerializedModel;
 import com.amplifyframework.datastore.model.CompoundModelProvider;
 import com.amplifyframework.datastore.model.SystemModelsProviderFactory;
@@ -53,7 +54,6 @@ import com.amplifyframework.util.Immutable;
 
 import com.google.gson.Gson;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -68,6 +68,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.subjects.PublishSubject;
@@ -251,6 +252,7 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked") // Casting StorageItemChange<SerializedModel> to StorageItemChange<T> is safe.
     @Override
     public <T extends Model> void save(
             @NonNull T item,
@@ -263,16 +265,25 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
         Objects.requireNonNull(predicate);
         Objects.requireNonNull(onSuccess);
         Objects.requireNonNull(onError);
-
+        LOG.info("save: " + item);
         threadPool.submit(() -> {
             try {
                 final String modelName = getModelName(item);
                 final ModelSchema modelSchema = modelSchemaRegistry.getModelSchemaForModelClass(modelName);
 
                 final StorageItemChange.Type writeType;
-                if (modelExists(item, QueryPredicates.all())) {
+                Model existingItem = existingItem(item, QueryPredicates.all());
+                if (existingItem != null) {
                     // if data exists already, then UPDATE the row
                     writeType = StorageItemChange.Type.UPDATE;
+
+                    // Check if existing data meets the condition
+                    if (existingItem(item, predicate) == null) {
+                        throw new DataStoreException(
+                            "Save failed because condition did not match existing model instance.",
+                            "The save will continue to fail until the model instance is updated."
+                        );
+                    }
                 } else if (!QueryPredicates.all().equals(predicate)) {
                     // insert not permitted with a condition
                     throw new DataStoreException(
@@ -285,20 +296,13 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
                     writeType = StorageItemChange.Type.CREATE;
                 }
 
-                // Check if existing data meets the condition
-                if (StorageItemChange.Type.UPDATE.equals(writeType) && !modelExists(item, predicate)) {
-                    throw new DataStoreException(
-                        "Save failed because condition did not match existing model instance.",
-                        "The save will continue to fail until the model instance is updated."
-                    );
-                }
-
                 // execute local save
                 writeData(item, writeType);
 
                 // publish successful save
                 StorageItemChange<T> change = StorageItemChange.<T>builder()
                         .item(item)
+                        .patchedItem(patchedItem(item, existingItem, modelSchema))
                         .modelSchema(modelSchema)
                         .type(writeType)
                         .predicate(predicate)
@@ -311,11 +315,13 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
             } catch (Exception someOtherTypeOfException) {
                 String modelToString = getModelName(item) + "[id=" + item.getId() + "]";
                 DataStoreException dataStoreException = new DataStoreException(
-                    "Error in saving the model: " + modelToString,
-                    someOtherTypeOfException, "See attached exception for details."
+                        "Error in saving the model: " + modelToString,
+                        someOtherTypeOfException, "See attached exception for details."
                 );
                 onError.accept(dataStoreException);
             }
+
+            LOG.info("save inside querySync results");
         });
     }
 
@@ -332,40 +338,46 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
         Objects.requireNonNull(options);
         Objects.requireNonNull(onSuccess);
         Objects.requireNonNull(onError);
-
         threadPool.submit(() -> {
-            try (Cursor cursor = getQueryAllCursor(itemClass.getSimpleName(), options)) {
-                LOG.debug("Querying item for: " + itemClass.getSimpleName());
-
-                final List<T> models = new ArrayList<>();
-                final ModelSchema modelSchema =
-                    modelSchemaRegistry.getModelSchemaForModelClass(itemClass.getSimpleName());
-                final SQLiteModelFieldTypeConverter converter =
-                    new SQLiteModelFieldTypeConverter(modelSchema, modelSchemaRegistry, gson);
-
-                if (cursor == null) {
-                    onError.accept(new DataStoreException(
-                        "Error in getting a cursor to the table for class: " + itemClass.getSimpleName(),
-                        AmplifyException.TODO_RECOVERY_SUGGESTION
-                    ));
-                    return;
-                }
-
-                if (cursor.moveToFirst()) {
-                    do {
-                        Map<String, Object> mapForModel = converter.buildMapForModel(cursor);
-                        models.add(deserializeModelFromRawMap(mapForModel, itemClass));
-                    } while (cursor.moveToNext());
-                }
-
-                onSuccess.accept(models.iterator());
-            } catch (Exception exception) {
-                onError.accept(new DataStoreException(
-                    "Error in querying the model.", exception,
-                    "See attached exception for details."
-                ));
+            try {
+                onSuccess.accept(querySync(itemClass, options));
+            } catch (DataStoreException exception) {
+                onError.accept(exception);
             }
         });
+    }
+
+    private <T extends Model> Iterator<T> querySync(@NonNull Class<T> itemClass, @NonNull QueryOptions options)
+            throws DataStoreException {
+        try (Cursor cursor = getQueryAllCursor(itemClass.getSimpleName(), options)) {
+            LOG.debug("Querying item for: " + itemClass.getSimpleName());
+
+            final List<T> models = new ArrayList<>();
+            final ModelSchema modelSchema = modelSchemaRegistry.getModelSchemaForModelClass(itemClass.getSimpleName());
+            final SQLiteModelFieldTypeConverter converter =
+                    new SQLiteModelFieldTypeConverter(modelSchema, modelSchemaRegistry, gson);
+
+            if (cursor == null) {
+                throw new DataStoreException(
+                        "Error in getting a cursor to the table for class: " + itemClass.getSimpleName(),
+                        AmplifyException.TODO_RECOVERY_SUGGESTION
+                );
+            }
+
+            if (cursor.moveToFirst()) {
+                do {
+                    Map<String, Object> map = converter.buildMapForModel(cursor);
+                    models.add(ModelConverter.fromMap(map, itemClass));
+                } while (cursor.moveToNext());
+            }
+
+            return models.iterator();
+        } catch (Exception exception) {
+            throw new DataStoreException(
+                "Error in querying the model.", exception,
+                "See attached exception for details."
+            );
+        }
     }
 
     /**
@@ -460,11 +472,12 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
                 final ModelSchema modelSchema = modelSchemaRegistry.getModelSchemaForModelClass(modelName);
 
                 // Check if data being deleted exists; "Succeed" deletion in that case.
-                if (!modelExists(item, QueryPredicates.all())) {
+                if (existingItem(item, QueryPredicates.all()) == null) {
                     LOG.verbose(modelName + " model with id = " + item.getId() + " does not exist.");
                     // Pass back item change instance without publishing it.
                     onSuccess.accept(StorageItemChange.<T>builder()
                         .item(item)
+                        .patchedItem(SerializedModel.create(item, modelSchema))
                         .modelSchema(modelSchema)
                         .type(StorageItemChange.Type.DELETE)
                         .predicate(predicate)
@@ -474,7 +487,7 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
                 }
 
                 // Check if existing data meets the condition
-                if (!modelExists(item, predicate)) {
+                if (existingItem(item, predicate) == null) {
                     throw new DataStoreException(
                         "Deletion failed because condition did not match existing model instance.",
                         "The deletion will continue to fail until the model instance is updated."
@@ -492,6 +505,7 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
                     ModelSchema schema = modelSchemaRegistry.getModelSchemaForModelInstance(cascadedModel);
                     itemChangeSubject.onNext(StorageItemChange.builder()
                         .item(cascadedModel)
+                        .patchedItem(SerializedModel.create(cascadedModel, modelSchema))
                         .modelSchema(schema)
                         .type(StorageItemChange.Type.DELETE)
                         .predicate(QueryPredicates.all())
@@ -502,6 +516,7 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
                 // publish successful deletion of top-level item
                 StorageItemChange<T> change = StorageItemChange.<T>builder()
                         .item(item)
+                        .patchedItem(SerializedModel.create(item, modelSchema))
                         .modelSchema(modelSchema)
                         .type(StorageItemChange.Type.DELETE)
                         .predicate(predicate)
@@ -754,18 +769,18 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
         }
     }
 
-    private boolean modelExists(Model model, QueryPredicate predicate) throws DataStoreException {
+    private Model existingItem(Model model, QueryPredicate predicate) throws DataStoreException {
         final String modelName = getModelName(model);
         final ModelSchema schema = modelSchemaRegistry.getModelSchemaForModelClass(modelName);
         final SQLiteTable table = SQLiteTable.fromSchema(schema);
-        final String tableName = table.getName();
         final String primaryKeyName = table.getPrimaryKeyColumnName();
 
         final QueryPredicate matchId = QueryField.field(primaryKeyName).eq(model.getId());
         final QueryPredicate condition = matchId.and(predicate);
-        try (Cursor cursor = getQueryAllCursor(tableName, Where.matches(condition))) {
-            return cursor.getCount() > 0;
-        }
+
+        Class<? extends Model> modelClass = (Class<? extends Model>) schema.getModelClass();
+        Iterator<? extends Model> result = querySync(modelClass, Where.matches(condition));
+        return result.hasNext() ? result.next() : null;
     }
 
     /*
@@ -793,11 +808,20 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
         }).ignoreElement();
     }
 
-    private <T extends Model> T deserializeModelFromRawMap(
-            @NonNull Map<String, Object> mapForModel,
-            @NonNull Class<T> itemClass) throws IOException {
-        final String modelInJsonFormat = gson.toJson(mapForModel);
-        return gson.getAdapter(itemClass).fromJson(modelInJsonFormat);
+    @SuppressWarnings("unchecked") // Cast to T
+    private <T extends Model> SerializedModel patchedItem(T updated, T original, ModelSchema modelSchema) {
+        Map<String, Object> updatedMap = ModelConverter.toMap(updated);
+        Map<String, Object> originalMap = ModelConverter.toMap(original);
+        // Remove any fields in updatedMap that are equal to the values in originalMap
+        Map<String, Object> patchMap = Observable.fromIterable(updatedMap.entrySet())
+            .filter(entry -> !ObjectsCompat.equals(originalMap.get(entry.getKey()), entry.getValue())
+                    || entry.getKey().equals("id")) // don't filter out id.
+            .toMap(Map.Entry::getKey, Map.Entry::getValue)
+            .blockingGet();
+        return SerializedModel.builder()
+                .serializedData(patchMap)
+                .modelSchema(modelSchema)
+                .build();
     }
 
     private String getModelName(@NonNull Model model) {
