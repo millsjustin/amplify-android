@@ -5,11 +5,9 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-
 import com.amplifyframework.auth.result.step.AuthSignInStep.DONE
 import com.amplifyframework.auth.sample.databinding.ActivitySignInBinding
 import com.amplifyframework.kotlin.core.Amplify
-
 import kotlinx.coroutines.launch
 
 class SignInActivity : AppCompatActivity() {
@@ -32,7 +30,10 @@ class SignInActivity : AppCompatActivity() {
             val result = Amplify.Auth.signIn(username, password)
             when (result.nextStep.signInStep) {
                 DONE -> goToLandingPage(this@SignInActivity, "Sign in complete.")
-                else -> goToLandingPage(this@SignInActivity, "Unhandled step: ${result.nextStep.signInStep}")
+                else -> goToLandingPage(
+                    this@SignInActivity,
+                    "Unhandled step: ${result.nextStep.signInStep}"
+                )
             }
         }
     }

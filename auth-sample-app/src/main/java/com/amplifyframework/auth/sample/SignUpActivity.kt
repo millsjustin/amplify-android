@@ -9,7 +9,6 @@ import com.amplifyframework.auth.result.step.AuthSignUpStep.CONFIRM_SIGN_UP_STEP
 import com.amplifyframework.auth.result.step.AuthSignUpStep.DONE
 import com.amplifyframework.auth.sample.databinding.ActivitySignUpBinding
 import com.amplifyframework.kotlin.core.Amplify
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

@@ -2,8 +2,8 @@ package com.amplifyframework.auth.sample
 
 import android.app.Activity
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.amplifyframework.auth.sample.databinding.ActivityLandingPageBinding
 
 class LandingPageActivity : AppCompatActivity() {

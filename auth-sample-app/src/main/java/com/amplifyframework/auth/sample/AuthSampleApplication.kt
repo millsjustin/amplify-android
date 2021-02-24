@@ -4,7 +4,7 @@ import android.app.Application
 import com.amplifyframework.auth.AWSAuthPlugin
 import com.amplifyframework.kotlin.core.Amplify
 
-class AuthSampleApplication: Application() {
+class AuthSampleApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         Amplify.addPlugin(AWSAuthPlugin())

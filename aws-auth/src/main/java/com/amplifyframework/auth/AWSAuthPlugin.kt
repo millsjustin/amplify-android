@@ -1,15 +1,12 @@
 package com.amplifyframework.auth
 
 import android.content.Context
-
 import com.amplifyframework.auth.options.AuthSignInOptions
 import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.auth.result.AuthSignInResult
 import com.amplifyframework.auth.result.AuthSignUpResult
 import com.amplifyframework.core.Consumer
-
 import org.json.JSONObject
-
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient
 import software.amazon.awssdk.regions.Region
@@ -33,8 +30,8 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
 
     override fun configure(pluginConfiguration: JSONObject?, context: Context) {
         val userPoolJson = pluginConfiguration!!
-                .getJSONObject("CognitoUserPool")
-                .getJSONObject("Default")
+            .getJSONObject("CognitoUserPool")
+            .getJSONObject("Default")
         clientId = userPoolJson.getString("AppClientId")
         clientSecret = userPoolJson.getString("AppClientSecret")
         poolId = userPoolJson.getString("PoolId")
@@ -48,15 +45,52 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
         return BuildConfig.VERSION_NAME
     }
 
-    override fun signUp(username: String, password: String, options: AuthSignUpOptions, onSuccess: Consumer<AuthSignUpResult>, onError: Consumer<AuthException>) {
-        SignUpOperation(client, clientId, clientSecret, username, password, options, onSuccess, onError).start()
+    override fun signUp(
+        username: String,
+        password: String,
+        options: AuthSignUpOptions,
+        onSuccess: Consumer<AuthSignUpResult>,
+        onError: Consumer<AuthException>
+    ) {
+        SignUpOperation(
+            client,
+            clientId,
+            clientSecret,
+            username,
+            password,
+            options,
+            onSuccess,
+            onError
+        ).start()
     }
 
-    override fun confirmSignUp(username: String, confirmationCode: String, onSuccess: Consumer<AuthSignUpResult>, onError: Consumer<AuthException>) {
-        ConfirmSignUpOperation(client, clientId, clientSecret, username, confirmationCode, onSuccess, onError).start()
+    override fun confirmSignUp(
+        username: String,
+        confirmationCode: String,
+        onSuccess: Consumer<AuthSignUpResult>,
+        onError: Consumer<AuthException>
+    ) {
+        ConfirmSignUpOperation(
+            client,
+            clientId,
+            clientSecret,
+            username,
+            confirmationCode,
+            onSuccess,
+            onError
+        ).start()
     }
 
-    override fun signIn(username: String?, password: String?, options: AuthSignInOptions, onSuccess: Consumer<AuthSignInResult>, onError: Consumer<AuthException>) {
-        SignInOperation(client, clientId, clientSecret, poolId, username!!, password!!, options, onSuccess, onError).start()
+    override fun signIn(
+        username: String?,
+        password: String?,
+        options: AuthSignInOptions,
+        onSuccess: Consumer<AuthSignInResult>,
+        onError: Consumer<AuthException>
+    ) {
+        SignInOperation(
+            client, clientId, clientSecret,
+            poolId, username!!, password!!, options, onSuccess, onError
+        ).start()
     }
 }

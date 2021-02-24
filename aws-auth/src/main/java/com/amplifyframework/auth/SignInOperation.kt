@@ -2,14 +2,19 @@ package com.amplifyframework.auth
 
 import android.util.Base64
 import android.util.Log
-
 import com.amplifyframework.auth.AuthCodeDeliveryDetails.DeliveryMedium.EMAIL
 import com.amplifyframework.auth.options.AuthSignInOptions
 import com.amplifyframework.auth.result.AuthSignInResult
 import com.amplifyframework.auth.result.step.AuthNextSignInStep
 import com.amplifyframework.auth.result.step.AuthSignInStep.DONE
 import com.amplifyframework.core.Consumer
-
+import java.math.BigInteger
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType.USER_SRP_AUTH
 import software.amazon.awssdk.services.cognitoidentityprovider.model.ChallengeNameType
@@ -17,25 +22,17 @@ import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAut
 import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthResponse
 import software.amazon.awssdk.services.cognitoidentityprovider.model.RespondToAuthChallengeRequest
 
-import java.math.BigInteger
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.TimeZone
-import java.util.Locale
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
-
-
 internal class SignInOperation(
-        private val cognito: CognitoIdentityProviderClient,
-        private val clientId: String,
-        private val clientSecret: String,
-        private val poolId: String,
-        private val username: String,
-        private val password: String,
-        private val options: AuthSignInOptions,
-        private val onSuccess: Consumer<AuthSignInResult>,
-        private val onError: Consumer<AuthException>) {
+    private val cognito: CognitoIdentityProviderClient,
+    private val clientId: String,
+    private val clientSecret: String,
+    private val poolId: String,
+    private val username: String,
+    private val password: String,
+    private val options: AuthSignInOptions,
+    private val onSuccess: Consumer<AuthSignInResult>,
+    private val onError: Consumer<AuthException>
+) {
 
     private val helper = AuthenticationHelper(poolId)
 
@@ -44,11 +41,13 @@ internal class SignInOperation(
         val request = InitiateAuthRequest.builder()
             .clientId(clientId)
             .authFlow(USER_SRP_AUTH)
-            .authParameters(mapOf(
+            .authParameters(
+                mapOf(
                     "USERNAME" to username,
                     "SRP_A" to helper.getA().toString(16),
                     "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret)
-            ))
+                )
+            )
             .build()
         val response = cognito.initiateAuth(request)
         Log.w("InitiateAuth", response.toString())
@@ -91,13 +90,15 @@ internal class SignInOperation(
         val request = RespondToAuthChallengeRequest.builder()
             .challengeName(initAuthResponse.challengeNameAsString())
             .clientId(clientId)
-            .challengeResponses(mapOf(
+            .challengeResponses(
+                mapOf(
                     "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret),
                     "PASSWORD_CLAIM_SIGNATURE" to claimSignature,
                     "PASSWORD_CLAIM_SECRET_BLOCK" to secretBlock,
                     "TIMESTAMP" to timestamp,
                     "USERNAME" to username
-            ))
+                )
+            )
             .session(initAuthResponse.session())
             .build()
         val responseToAuthChallenge = cognito.respondToAuthChallenge(request)
@@ -105,7 +106,12 @@ internal class SignInOperation(
     }
 
     // calculateSignature(hkdf, userPoolId, ChallengeParameters.USER_ID_FOR_SRP, ChallengeParameters.SECRET_BLOCK, dateNow)
-    private fun claimSignature(userIdForSrp: String, key: ByteArray, timestamp: String, secretBlock: String): String {
+    private fun claimSignature(
+        userIdForSrp: String,
+        key: ByteArray,
+        timestamp: String,
+        secretBlock: String
+    ): String {
         val algorithm = "HmacSHA256"
         val mac = Mac.getInstance(algorithm)
         val keySpec = SecretKeySpec(key, algorithm)
