@@ -15,10 +15,6 @@ import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient
 
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
-
 class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() {
     private val client: CognitoIdentityProviderClient =
         CognitoIdentityProviderClient.builder()
@@ -56,38 +52,11 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
         SignUpOperation(client, clientId, clientSecret, username, password, options, onSuccess, onError).start()
     }
 
-    suspend fun signUp(username: String, password: String, options: AuthSignUpOptions): AuthSignUpResult {
-        return suspendCoroutine { continuation ->
-            signUp(username, password, options,
-                    { continuation.resume(it) },
-                    { continuation.resumeWithException(it) }
-            )
-        }
-    }
-
     override fun confirmSignUp(username: String, confirmationCode: String, onSuccess: Consumer<AuthSignUpResult>, onError: Consumer<AuthException>) {
         ConfirmSignUpOperation(client, clientId, clientSecret, username, confirmationCode, onSuccess, onError).start()
     }
 
-    suspend fun confirmSignUp(username: String, confirmationCode: String): AuthSignUpResult {
-        return suspendCoroutine { continuation ->
-            confirmSignUp(username, confirmationCode,
-                    { continuation.resume(it) },
-                    { continuation.resumeWithException(it) }
-            )
-        }
-    }
-
     override fun signIn(username: String?, password: String?, options: AuthSignInOptions, onSuccess: Consumer<AuthSignInResult>, onError: Consumer<AuthException>) {
         SignInOperation(client, clientId, clientSecret, poolId, username!!, password!!, options, onSuccess, onError).start()
-    }
-
-    suspend fun signIn(username: String, password: String, options: AuthSignInOptions): AuthSignInResult {
-        return suspendCoroutine { continuation ->
-            signIn(username, password, options,
-                    { continuation.resume(it) },
-                    { continuation.resumeWithException(it) }
-            )
-        }
     }
 }

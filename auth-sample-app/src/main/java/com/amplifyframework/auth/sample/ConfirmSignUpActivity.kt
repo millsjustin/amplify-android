@@ -4,11 +4,13 @@ import android.app.Activity
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
 
 import com.amplifyframework.auth.sample.databinding.ActivityConfirmSignUpBinding
+import com.amplifyframework.kotlin.core.Amplify
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
@@ -24,12 +26,11 @@ class ConfirmSignUpActivity : AppCompatActivity() {
     }
 
     private fun submitConfirmationCode(username: String) {
-        runBlocking {
+        lifecycleScope.launch {
             val code = view.codeEntry.text.toString()
-            val plugin = (application as AuthSampleApplication).getPlugin()
             val result = withContext(Dispatchers.IO) {
                 Timber.tag("ConfirmSignUp").e("username = ${username}, code=${code}")
-                plugin.confirmSignUp(username, code)
+                Amplify.Auth.confirmSignUp(username, code)
             }
             if (result.isSignUpComplete) {
                 goToSignIn(this@ConfirmSignUpActivity, username)

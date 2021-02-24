@@ -4,14 +4,13 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 
-import com.amplifyframework.auth.options.AuthSignInOptions
 import com.amplifyframework.auth.result.step.AuthSignInStep.DONE
 import com.amplifyframework.auth.sample.databinding.ActivitySignInBinding
+import com.amplifyframework.kotlin.core.Amplify
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 class SignInActivity : AppCompatActivity() {
     private lateinit var view: ActivitySignInBinding
@@ -27,21 +26,16 @@ class SignInActivity : AppCompatActivity() {
     }
 
     private fun signIn() {
-        runBlocking {
+        lifecycleScope.launch {
             val username = view.username.text.toString()
             val password = view.password.text.toString()
-            val plugin = (application as AuthSampleApplication).getPlugin()
-            val result = withContext(Dispatchers.IO) {
-                plugin.signIn(username, password, NoSignInOptions())
-            }
+            val result = Amplify.Auth.signIn(username, password)
             when (result.nextStep.signInStep) {
                 DONE -> goToLandingPage(this@SignInActivity, "Sign in complete.")
                 else -> goToLandingPage(this@SignInActivity, "Unhandled step: ${result.nextStep.signInStep}")
             }
         }
     }
-
-    class NoSignInOptions: AuthSignInOptions()
 }
 
 fun goToSignIn(source: Activity, username: String) {
