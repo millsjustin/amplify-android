@@ -7,7 +7,7 @@ import android.view.View.INVISIBLE
 import android.view.View.VISIBLE
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.amplifyframework.auth.ValidSession
+import com.amplifyframework.auth.Session.ValidSession
 import com.amplifyframework.auth.sample.databinding.ActivityCredentialsStatusBinding
 import com.amplifyframework.kotlin.core.Amplify
 import kotlinx.coroutines.Dispatchers

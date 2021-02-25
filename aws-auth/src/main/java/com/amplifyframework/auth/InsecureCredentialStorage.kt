@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 // TODO: write one that uses encryption, instead.
 class InsecureCredentialStorage(context: Context): CredentialStorage {
@@ -13,6 +14,10 @@ class InsecureCredentialStorage(context: Context): CredentialStorage {
     @SuppressLint("ApplySharedPref")
     override fun clear() {
         prefs.edit().clear().commit()
+    }
+
+    override fun isEmpty(): Boolean {
+        return !prefs.contains(Key.EXPIRATION_EPOCH.name)
     }
 
     override fun accessToken(token: String) {
@@ -43,8 +48,12 @@ class InsecureCredentialStorage(context: Context): CredentialStorage {
         store(Key.EXPIRATION_EPOCH, now() + period)
     }
 
+    // TODO: feels like this logic probably belongs a level higher in abstraction.
     override fun isExpired(): Boolean {
-        return now() > prefs.getLong(Key.EXPIRATION_EPOCH.name, 0)
+        val gracePeriod = TimeUnit.MINUTES.toSeconds(5)
+        val expirationEpoch = prefs.getLong(Key.EXPIRATION_EPOCH.name, 0)
+        val safelyBeforeExpiration = max(0, expirationEpoch - gracePeriod)
+        return now() > safelyBeforeExpiration
     }
 
     private fun now(): Long {

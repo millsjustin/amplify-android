@@ -98,8 +98,11 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
         ).start()
     }
 
-    override fun fetchAuthSession(onSuccess: Consumer<AuthSession>, onError: Consumer<AuthException>) {
-        FetchAuthSessionOperation(credentialStorage, onSuccess, onError).start()
+    override fun fetchAuthSession(
+            onSuccess: Consumer<AuthSession>,
+            onError: Consumer<AuthException>,
+    ) {
+        FetchAuthSessionOperation(credentialStorage, client, clientId, onSuccess, onError).start()
     }
 
     override fun signOut(options: AuthSignOutOptions, onSuccess: Action, onError: Consumer<AuthException>) {

@@ -5,6 +5,8 @@ interface CredentialStorage {
 
     fun clear()
 
+    fun isEmpty(): Boolean
+
     fun accessToken(token: String)
 
     fun idToken(token: String)
