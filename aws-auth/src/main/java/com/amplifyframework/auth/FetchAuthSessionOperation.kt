@@ -1,5 +1,6 @@
 package com.amplifyframework.auth
 
+import android.util.Log
 import com.amplifyframework.auth.Session.InvalidSession
 import com.amplifyframework.auth.Session.ValidSession
 import com.amplifyframework.core.Consumer
@@ -14,12 +15,14 @@ internal class FetchAuthSessionOperation(
         private val credentialStorage: CredentialStorage,
         private val cognito: CognitoIdentityProviderClient,
         private val clientId: String,
+        private val clientSecret: String,
         private val onSuccess: Consumer<AuthSession>,
         private val onError: Consumer<AuthException>) {
     internal fun start() {
         GlobalScope.launch(Dispatchers.IO) {
             if (credentialStorage.isEmpty()) {
                 onSuccess.accept(InvalidSession())
+                return@launch
             } else if (credentialStorage.isExpired()) {
                 refresh()
             }
@@ -34,7 +37,11 @@ internal class FetchAuthSessionOperation(
     }
 
     private fun refresh() {
-        val parameters = mapOf("REFRESH_TOKEN" to credentialStorage.refreshToken())
+        Log.i("FetchAuthSession", "Refreshing token...")
+        val parameters = mapOf(
+            "REFRESH_TOKEN" to credentialStorage.refreshToken(),
+            "SECRET_HASH" to clientSecret // Surprising, huh? I was surprised, too, Cognito.
+        )
         val request = InitiateAuthRequest.builder()
             .authFlow(REFRESH_TOKEN_AUTH)
             .clientId(clientId)
@@ -43,7 +50,9 @@ internal class FetchAuthSessionOperation(
         val response = cognito.initiateAuth(request)
         val authenticationResult = response.authenticationResult()
         credentialStorage.clear()
-        credentialStorage.refreshToken(authenticationResult.refreshToken())
+        if (authenticationResult.refreshToken() != null) {
+            credentialStorage.refreshToken(authenticationResult.refreshToken())
+        }
         credentialStorage.accessToken(authenticationResult.accessToken())
         credentialStorage.idToken(authenticationResult.idToken())
         credentialStorage.expiresIn(authenticationResult.expiresIn())

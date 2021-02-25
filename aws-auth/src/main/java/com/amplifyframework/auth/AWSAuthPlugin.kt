@@ -102,7 +102,7 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
             onSuccess: Consumer<AuthSession>,
             onError: Consumer<AuthException>,
     ) {
-        FetchAuthSessionOperation(credentialStorage, client, clientId, onSuccess, onError).start()
+        FetchAuthSessionOperation(credentialStorage, client, clientId, clientSecret, onSuccess, onError).start()
     }
 
     override fun signOut(options: AuthSignOutOptions, onSuccess: Action, onError: Consumer<AuthException>) {

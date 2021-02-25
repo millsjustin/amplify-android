@@ -3,6 +3,7 @@ package com.amplifyframework.auth
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
@@ -50,9 +51,10 @@ class InsecureCredentialStorage(context: Context): CredentialStorage {
 
     // TODO: feels like this logic probably belongs a level higher in abstraction.
     override fun isExpired(): Boolean {
-        val gracePeriod = TimeUnit.MINUTES.toSeconds(5)
+        val gracePeriod = TimeUnit.MINUTES.toSeconds(3)
         val expirationEpoch = prefs.getLong(Key.EXPIRATION_EPOCH.name, 0)
         val safelyBeforeExpiration = max(0, expirationEpoch - gracePeriod)
+        Log.i("CredentialsStorage", "now() = ${now()}, but deadline = $safelyBeforeExpiration")
         return now() > safelyBeforeExpiration
     }
 
