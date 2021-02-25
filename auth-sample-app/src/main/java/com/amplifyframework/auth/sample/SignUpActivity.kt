@@ -1,5 +1,7 @@
 package com.amplifyframework.auth.sample
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -39,4 +41,10 @@ class SignUpActivity : AppCompatActivity() {
             }
         }
     }
+}
+
+
+fun goToSignUp(source: Activity) {
+    val signUpIntent = Intent(source, SignUpActivity::class.java)
+    source.startActivity(signUpIntent)
 }

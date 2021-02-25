@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="75dp"
     tools:context=".SignInActivity"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:gravity="center">
 
     <TextView
         android:id="@+id/title"
         android:textSize="30sp"
         android:textAlignment="center"
         android:gravity="center"
+        android:layout_marginBottom="20dp"
         android:text="@string/sign_in"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
@@ -32,9 +36,18 @@
         android:autofillHints="@string/password_hint_text" />
 
     <Button
+        android:layout_marginTop="20dp"
         android:id="@+id/submit_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/sign_in" />
 
+    <TextView
+        android:id="@+id/sign_up_link_text"
+        android:layout_marginTop="40dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/teal_700"
+        android:gravity="center"
+        android:text="@string/need_an_account_sign_up"/>
 </LinearLayout>

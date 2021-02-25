@@ -3,11 +3,17 @@ package com.amplifyframework.auth
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import java.util.concurrent.TimeUnit
 
 // TODO: write one that uses encryption, instead.
 class InsecureCredentialStorage(context: Context): CredentialStorage {
     private val label = InsecureCredentialStorage::class.simpleName
     private val prefs: SharedPreferences = context.getSharedPreferences(label, Context.MODE_PRIVATE)
+
+    @SuppressLint("ApplySharedPref")
+    override fun clear() {
+        prefs.edit().clear().commit()
+    }
 
     override fun accessToken(token: String) {
         store(Key.ACCESS_TOKEN, token)
@@ -34,7 +40,15 @@ class InsecureCredentialStorage(context: Context): CredentialStorage {
     }
 
     override fun expiresIn(period: Int) {
-        store(Key.EXPIRES_IN, period)
+        store(Key.EXPIRATION_EPOCH, now() + period)
+    }
+
+    override fun isExpired(): Boolean {
+        return now() > prefs.getLong(Key.EXPIRATION_EPOCH.name, 0)
+    }
+
+    private fun now(): Long {
+        return TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())
     }
 
     override fun tokenType(type: String) {
@@ -53,9 +67,9 @@ class InsecureCredentialStorage(context: Context): CredentialStorage {
     }
 
     @SuppressLint("ApplySharedPref")
-    private fun store(key: Key, value: Int) {
+    private fun store(key: Key, value: Long) {
         prefs.edit()
-            .putInt(key.name, value)
+            .putLong(key.name, value)
             .commit()
     }
 
@@ -67,7 +81,7 @@ class InsecureCredentialStorage(context: Context): CredentialStorage {
         ACCESS_TOKEN,
         ID_TOKEN,
         REFRESH_TOKEN,
-        EXPIRES_IN,
+        EXPIRATION_EPOCH,
         TOKEN_TYPE
     }
 }

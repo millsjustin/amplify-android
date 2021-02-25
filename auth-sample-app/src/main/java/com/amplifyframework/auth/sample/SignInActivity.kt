@@ -21,6 +21,9 @@ class SignInActivity : AppCompatActivity() {
         view.submitButton.setOnClickListener {
             signIn()
         }
+        view.signUpLinkText.setOnClickListener {
+            goToSignUp(source = this)
+        }
     }
 
     private fun signIn() {
@@ -29,8 +32,8 @@ class SignInActivity : AppCompatActivity() {
             val password = view.password.text.toString()
             val result = Amplify.Auth.signIn(username, password)
             when (result.nextStep.signInStep) {
-                DONE -> goToLandingPage(this@SignInActivity, "Sign in complete.")
-                else -> goToLandingPage(
+                DONE -> goToCredentialsStatus(this@SignInActivity, "Sign in complete.")
+                else -> goToCredentialsStatus(
                     this@SignInActivity,
                     "Unhandled step: ${result.nextStep.signInStep}"
                 )
@@ -39,7 +42,7 @@ class SignInActivity : AppCompatActivity() {
     }
 }
 
-fun goToSignIn(source: Activity, username: String) {
+fun goToSignIn(source: Activity, username: String? = null) {
     val intent = Intent(source, SignInActivity::class.java)
     intent.putExtra("username", username)
     source.startActivity(intent)

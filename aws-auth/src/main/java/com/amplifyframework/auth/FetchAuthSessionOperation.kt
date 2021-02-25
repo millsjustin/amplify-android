@@ -11,6 +11,9 @@ internal class FetchAuthSessionOperation(
         private val onError: Consumer<AuthException>) {
     internal fun start() {
         GlobalScope.launch(Dispatchers.IO) {
+            if (credentialStorage.isExpired()) {
+                onSuccess.accept(InvalidSession())
+            }
             try {
                 val accessToken = credentialStorage.accessToken()
                 val idToken = credentialStorage.idToken()

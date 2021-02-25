@@ -2,9 +2,11 @@ package com.amplifyframework.auth
 
 import android.content.Context
 import com.amplifyframework.auth.options.AuthSignInOptions
+import com.amplifyframework.auth.options.AuthSignOutOptions
 import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.auth.result.AuthSignInResult
 import com.amplifyframework.auth.result.AuthSignUpResult
+import com.amplifyframework.core.Action
 import com.amplifyframework.core.Consumer
 import org.json.JSONObject
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
@@ -98,5 +100,9 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
 
     override fun fetchAuthSession(onSuccess: Consumer<AuthSession>, onError: Consumer<AuthException>) {
         FetchAuthSessionOperation(credentialStorage, onSuccess, onError).start()
+    }
+
+    override fun signOut(options: AuthSignOutOptions, onSuccess: Action, onError: Consumer<AuthException>) {
+        SignOutOperation(client, credentialStorage, onSuccess, onError).start()
     }
 }

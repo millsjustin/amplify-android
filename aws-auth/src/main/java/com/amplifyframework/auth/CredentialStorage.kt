@@ -3,6 +3,8 @@ package com.amplifyframework.auth
 // TODO: data class? This looks like a bunch of dumb setters/getters.
 interface CredentialStorage {
 
+    fun clear()
+
     fun accessToken(token: String)
 
     fun idToken(token: String)
@@ -10,6 +12,8 @@ interface CredentialStorage {
     fun refreshToken(token: String)
 
     fun expiresIn(period: Int)
+
+    fun isExpired(): Boolean
 
     fun tokenType(type: String)
 
