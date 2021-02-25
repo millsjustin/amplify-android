@@ -22,6 +22,7 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
     private lateinit var poolId: String
     private lateinit var clientId: String
     private lateinit var clientSecret: String
+    private lateinit var credentialStorage: CredentialStorage
 
     override fun getPluginKey(): String {
         // TODO: This is a lie. But this is what the CLI generates right now!
@@ -35,6 +36,7 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
         clientId = userPoolJson.getString("AppClientId")
         clientSecret = userPoolJson.getString("AppClientSecret")
         poolId = userPoolJson.getString("PoolId")
+        credentialStorage = InsecureCredentialStorage(context)
     }
 
     override fun getEscapeHatch(): CognitoIdentityProviderClient {
@@ -89,8 +91,12 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
         onError: Consumer<AuthException>
     ) {
         SignInOperation(
-            client, clientId, clientSecret,
+            client, credentialStorage, clientId, clientSecret,
             poolId, username!!, password!!, options, onSuccess, onError
         ).start()
+    }
+
+    override fun fetchAuthSession(onSuccess: Consumer<AuthSession>, onError: Consumer<AuthException>) {
+        FetchAuthSessionOperation(credentialStorage, onSuccess, onError).start()
     }
 }

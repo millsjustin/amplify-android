@@ -8,22 +8,27 @@ import com.amplifyframework.auth.result.AuthSignInResult
 import com.amplifyframework.auth.result.step.AuthNextSignInStep
 import com.amplifyframework.auth.result.step.AuthSignInStep.DONE
 import com.amplifyframework.core.Consumer
-import java.math.BigInteger
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient
 import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType.USER_SRP_AUTH
+import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthenticationResultType
 import software.amazon.awssdk.services.cognitoidentityprovider.model.ChallengeNameType
 import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthRequest
 import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthResponse
 import software.amazon.awssdk.services.cognitoidentityprovider.model.RespondToAuthChallengeRequest
+import java.math.BigInteger
+import java.text.SimpleDateFormat
+import java.util.TimeZone
+import java.util.Locale
+import java.util.Date
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 internal class SignInOperation(
     private val cognito: CognitoIdentityProviderClient,
+    private val credentialStorage: CredentialStorage,
     private val clientId: String,
     private val clientSecret: String,
     private val poolId: String,
@@ -33,10 +38,19 @@ internal class SignInOperation(
     private val onSuccess: Consumer<AuthSignInResult>,
     private val onError: Consumer<AuthException>
 ) {
-
     private val helper = AuthenticationHelper(poolId)
 
-    fun start() {
+    internal fun start() {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                onSuccess.accept(callCognito())
+            } catch (error: Throwable) {
+                onError.accept(AuthException("Sign in failed.", error, "Try again."))
+            }
+        }
+    }
+
+    private fun callCognito(): AuthSignInResult {
         @Suppress("UsePropertyAccessSyntax") // getA() is NOT "a"!!!!!!
         val request = InitiateAuthRequest.builder()
             .clientId(clientId)
@@ -53,11 +67,10 @@ internal class SignInOperation(
         Log.w("InitiateAuth", response.toString())
 
         if (!response.hasChallengeParameters()) {
+            storeCredentials(response.authenticationResult())
             val details = AuthCodeDeliveryDetails("TODO: what is this field, actually?", EMAIL)
             val nextStep = AuthNextSignInStep(DONE, emptyMap(), details)
-            val result = AuthSignInResult(true, nextStep)
-            onSuccess.accept(result)
-            return
+            return AuthSignInResult(true, nextStep)
         }
 
         when (response.challengeName()) {
@@ -65,17 +78,17 @@ internal class SignInOperation(
                 verifyPassword(password, response)
                 val details = AuthCodeDeliveryDetails("what is this", EMAIL)
                 val nextStep = AuthNextSignInStep(DONE, emptyMap(), details)
-                onSuccess.accept(AuthSignInResult(true, nextStep))
+                return AuthSignInResult(true, nextStep)
             }
             else -> {
-                val message = "Unknown challenge = ${response.challengeName()}"
-                val recovery = "Implement it!"
-                onError.accept(AuthException(message, recovery))
+                throw AuthException("Unknown challenge = ${response.challengeName()}", "Implement it!")
             }
         }
     }
 
     private fun verifyPassword(password: String, initAuthResponse: InitiateAuthResponse) {
+        Log.i("SignIn", "verifying password from $initAuthResponse")
+
         val challengeParameters = initAuthResponse.challengeParameters()!!
         val salt = BigInteger(challengeParameters["SALT"]!!, 16)
         val secretBlock = challengeParameters["SECRET_BLOCK"]!!
@@ -102,7 +115,8 @@ internal class SignInOperation(
             .session(initAuthResponse.session())
             .build()
         val responseToAuthChallenge = cognito.respondToAuthChallenge(request)
-        Log.w("SignIn", responseToAuthChallenge.toString())
+        val authResult = responseToAuthChallenge.authenticationResult()
+        storeCredentials(authResult)
     }
 
     // calculateSignature(hkdf, userPoolId, ChallengeParameters.USER_ID_FOR_SRP, ChallengeParameters.SECRET_BLOCK, dateNow)
@@ -128,5 +142,14 @@ internal class SignInOperation(
         val simpleDateFormat = SimpleDateFormat("EEE MMM d HH:mm:ss z yyyy", Locale.US)
         simpleDateFormat.timeZone = TimeZone.getTimeZone("UTC")
         return simpleDateFormat.format(Date())
+    }
+
+    private fun storeCredentials(authResult: AuthenticationResultType) {
+        Log.i("SignIn", "handling auth result = $authResult")
+        credentialStorage.accessToken(authResult.accessToken())
+        credentialStorage.idToken(authResult.idToken())
+        credentialStorage.refreshToken(authResult.refreshToken())
+        credentialStorage.expiresIn(authResult.expiresIn())
+        credentialStorage.tokenType(authResult.tokenType())
     }
 }

@@ -9,4 +9,6 @@
     <string name="enter_your_confirmation_code_here">Enter your confirmation code here.</string>
     <string name="confirm">Confirm</string>
     <string name="sign_in">Sign in</string>
+    <string name="access_token_label">Access token:</string>
+    <string name="id_token">ID token</string>
 </resources>
