@@ -2,15 +2,25 @@ package com.amplifyframework.auth
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import androidx.security.crypto.MasterKey.KeyScheme
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 // TODO: write one that uses encryption, instead.
-class InsecureCredentialStorage(context: Context): CredentialStorage {
-    private val label = InsecureCredentialStorage::class.simpleName
-    private val prefs: SharedPreferences = context.getSharedPreferences(label, Context.MODE_PRIVATE)
+class SecureCredentialStorage(context: Context): CredentialStorage {
+    private val masterKey = MasterKey.Builder(context, "amplify_auth_storage_key_alias")
+        .setKeyScheme(KeyScheme.AES256_GCM)
+        .build()
+    private val prefs = EncryptedSharedPreferences.create(
+        context,
+        "amplify_auth_shared_prefs",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
     @SuppressLint("ApplySharedPref")
     override fun clear() {

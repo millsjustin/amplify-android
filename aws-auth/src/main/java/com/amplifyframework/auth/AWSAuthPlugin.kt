@@ -38,7 +38,7 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
         clientId = userPoolJson.getString("AppClientId")
         clientSecret = userPoolJson.getString("AppClientSecret")
         poolId = userPoolJson.getString("PoolId")
-        credentialStorage = InsecureCredentialStorage(context)
+        credentialStorage = SecureCredentialStorage(context)
     }
 
     override fun getEscapeHatch(): CognitoIdentityProviderClient {
