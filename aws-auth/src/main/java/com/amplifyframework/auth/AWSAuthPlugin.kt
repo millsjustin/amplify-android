@@ -1,6 +1,7 @@
 package com.amplifyframework.auth
 
 import android.content.Context
+import com.amplifyframework.auth.client.Cognito
 import com.amplifyframework.auth.options.AuthSignInOptions
 import com.amplifyframework.auth.options.AuthSignOutOptions
 import com.amplifyframework.auth.options.AuthSignUpOptions
@@ -9,18 +10,9 @@ import com.amplifyframework.auth.result.AuthSignUpResult
 import com.amplifyframework.core.Action
 import com.amplifyframework.core.Consumer
 import org.json.JSONObject
-import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient
 
-class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() {
-    private val client: CognitoIdentityProviderClient =
-        CognitoIdentityProviderClient.builder()
-            .region(Region.US_EAST_1)
-            .credentialsProvider(AnonymousCredentialsProvider.create())
-            .httpClient(UrlConnectionHttpClient.create())
-            .build()
+class AWSAuthPlugin : NotImplementedAuthPlugin<Unit>() {
+    private val client = Cognito()
     private lateinit var poolId: String
     private lateinit var clientId: String
     private lateinit var clientSecret: String
@@ -41,8 +33,8 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<CognitoIdentityProviderClient>() 
         credentialStorage = SecureCredentialStorage(context)
     }
 
-    override fun getEscapeHatch(): CognitoIdentityProviderClient {
-        return client
+    override fun getEscapeHatch() {
+        return
     }
 
     override fun getVersion(): String {

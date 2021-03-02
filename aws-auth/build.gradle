@@ -32,12 +32,6 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-
-    packagingOptions {
-        exclude 'META-INF/INDEX.LIST'
-        exclude 'META-INF/io.netty.versions.properties'
-        exclude 'META-INF/DEPENDENCIES'
-    }
 }
 
 dependencies {
@@ -47,10 +41,6 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2'
 
     implementation 'androidx.annotation:annotation:1.1.0'
-
-    implementation 'software.amazon.awssdk:cognitoidentityprovider:2.15.54'
-    implementation 'software.amazon.awssdk:url-connection-client:2.15.49'
-    implementation 'org.slf4j:slf4j-android:1.7.30'
     implementation 'androidx.security:security-crypto:1.1.0-alpha03'
 }
 

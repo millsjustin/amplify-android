@@ -3,6 +3,11 @@ package com.amplifyframework.auth
 import android.util.Base64
 import android.util.Log
 import com.amplifyframework.auth.AuthCodeDeliveryDetails.DeliveryMedium.EMAIL
+import com.amplifyframework.auth.client.AuthenticationResult
+import com.amplifyframework.auth.client.Cognito
+import com.amplifyframework.auth.client.InitiateAuthRequest
+import com.amplifyframework.auth.client.InitiateAuthResponse
+import com.amplifyframework.auth.client.RespondToAuthChallengeRequest
 import com.amplifyframework.auth.options.AuthSignInOptions
 import com.amplifyframework.auth.result.AuthSignInResult
 import com.amplifyframework.auth.result.step.AuthNextSignInStep
@@ -11,13 +16,6 @@ import com.amplifyframework.core.Consumer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient
-import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType.USER_SRP_AUTH
-import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthenticationResultType
-import software.amazon.awssdk.services.cognitoidentityprovider.model.ChallengeNameType
-import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthRequest
-import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthResponse
-import software.amazon.awssdk.services.cognitoidentityprovider.model.RespondToAuthChallengeRequest
 import java.math.BigInteger
 import java.text.SimpleDateFormat
 import java.util.TimeZone
@@ -27,16 +25,16 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 internal class SignInOperation(
-    private val cognito: CognitoIdentityProviderClient,
-    private val credentialStorage: CredentialStorage,
-    private val clientId: String,
-    private val clientSecret: String,
-    private val poolId: String,
-    private val username: String,
-    private val password: String,
-    private val options: AuthSignInOptions,
-    private val onSuccess: Consumer<AuthSignInResult>,
-    private val onError: Consumer<AuthException>
+        private val cognito: Cognito,
+        private val credentialStorage: CredentialStorage,
+        private val clientId: String,
+        private val clientSecret: String,
+        private val poolId: String,
+        private val username: String,
+        private val password: String,
+        private val options: AuthSignInOptions,
+        private val onSuccess: Consumer<AuthSignInResult>,
+        private val onError: Consumer<AuthException>
 ) {
     private val helper = AuthenticationHelper(poolId)
 
@@ -52,36 +50,33 @@ internal class SignInOperation(
 
     private fun callCognito(): AuthSignInResult {
         @Suppress("UsePropertyAccessSyntax") // getA() is NOT "a"!!!!!!
-        val request = InitiateAuthRequest.builder()
-            .clientId(clientId)
-            .authFlow(USER_SRP_AUTH)
-            .authParameters(
-                mapOf(
-                    "USERNAME" to username,
-                    "SRP_A" to helper.getA().toString(16),
-                    "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret)
-                )
+        val response = cognito.initiateAuth(InitiateAuthRequest(
+            clientId = clientId,
+            authFlow = "USER_SRP_AUTH",
+            authParameters = mapOf(
+                "USERNAME" to username,
+                "SRP_A" to helper.getA().toString(16),
+                "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret)
             )
-            .build()
-        val response = cognito.initiateAuth(request)
+        ))
         Log.w("InitiateAuth", response.toString())
 
-        if (!response.hasChallengeParameters()) {
-            storeCredentials(response.authenticationResult())
+        if (!response.hasChallengeParameters) {
+            storeCredentials(response.authenticationResult)
             val details = AuthCodeDeliveryDetails("TODO: what is this field, actually?", EMAIL)
             val nextStep = AuthNextSignInStep(DONE, emptyMap(), details)
             return AuthSignInResult(true, nextStep)
         }
 
-        when (response.challengeName()) {
-            ChallengeNameType.PASSWORD_VERIFIER -> {
+        when (response.challengeName) {
+            "PASSWORD_VERIFIER" -> {
                 verifyPassword(password, response)
                 val details = AuthCodeDeliveryDetails("what is this", EMAIL)
                 val nextStep = AuthNextSignInStep(DONE, emptyMap(), details)
                 return AuthSignInResult(true, nextStep)
             }
             else -> {
-                throw AuthException("Unknown challenge = ${response.challengeName()}", "Implement it!")
+                throw AuthException("Unknown challenge = ${response.challengeName}", "Implement it!")
             }
         }
     }
@@ -89,7 +84,7 @@ internal class SignInOperation(
     private fun verifyPassword(password: String, initAuthResponse: InitiateAuthResponse) {
         Log.i("SignIn", "verifying password from $initAuthResponse")
 
-        val challengeParameters = initAuthResponse.challengeParameters()!!
+        val challengeParameters = initAuthResponse.challengeParameters
         val salt = BigInteger(challengeParameters["SALT"]!!, 16)
         val secretBlock = challengeParameters["SECRET_BLOCK"]!!
         val userIdForSrp = challengeParameters["USER_ID_FOR_SRP"]!!
@@ -100,22 +95,20 @@ internal class SignInOperation(
         val key = helper.getPasswordAuthenticationKey(userIdForSrp, password, srpB, salt)
         val claimSignature = claimSignature(userIdForSrp, key, timestamp, secretBlock)
 
-        val request = RespondToAuthChallengeRequest.builder()
-            .challengeName(initAuthResponse.challengeNameAsString())
-            .clientId(clientId)
-            .challengeResponses(
-                mapOf(
-                    "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret),
-                    "PASSWORD_CLAIM_SIGNATURE" to claimSignature,
-                    "PASSWORD_CLAIM_SECRET_BLOCK" to secretBlock,
-                    "TIMESTAMP" to timestamp,
-                    "USERNAME" to username
-                )
-            )
-            .session(initAuthResponse.session())
-            .build()
+        val request = RespondToAuthChallengeRequest(
+            challengeName = initAuthResponse.challengeName,
+            clientId = clientId,
+            challengeResponses = mapOf(
+                "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret),
+                "PASSWORD_CLAIM_SIGNATURE" to claimSignature,
+                "PASSWORD_CLAIM_SECRET_BLOCK" to secretBlock,
+                "TIMESTAMP" to timestamp,
+                "USERNAME" to username
+            ),
+            session = initAuthResponse.session
+        )
         val responseToAuthChallenge = cognito.respondToAuthChallenge(request)
-        val authResult = responseToAuthChallenge.authenticationResult()
+        val authResult = responseToAuthChallenge.authenticationResult
         storeCredentials(authResult)
     }
 
@@ -144,12 +137,12 @@ internal class SignInOperation(
         return simpleDateFormat.format(Date())
     }
 
-    private fun storeCredentials(authResult: AuthenticationResultType) {
+    private fun storeCredentials(authResult: AuthenticationResult) {
         Log.i("SignIn", "handling auth result = $authResult")
-        credentialStorage.accessToken(authResult.accessToken())
-        credentialStorage.idToken(authResult.idToken())
-        credentialStorage.refreshToken(authResult.refreshToken())
-        credentialStorage.expiresIn(authResult.expiresIn())
-        credentialStorage.tokenType(authResult.tokenType())
+        credentialStorage.accessToken(authResult.accessToken)
+        credentialStorage.idToken(authResult.idToken)
+        credentialStorage.refreshToken(authResult.refreshToken)
+        credentialStorage.expiresIn(authResult.expiresIn)
+        credentialStorage.tokenType(authResult.tokenType)
     }
 }

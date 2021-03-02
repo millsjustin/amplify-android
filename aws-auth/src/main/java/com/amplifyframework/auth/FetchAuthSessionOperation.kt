@@ -3,17 +3,16 @@ package com.amplifyframework.auth
 import android.util.Log
 import com.amplifyframework.auth.Session.InvalidSession
 import com.amplifyframework.auth.Session.ValidSession
+import com.amplifyframework.auth.client.Cognito
+import com.amplifyframework.auth.client.InitiateAuthRequest
 import com.amplifyframework.core.Consumer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient
-import software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType.REFRESH_TOKEN_AUTH
-import software.amazon.awssdk.services.cognitoidentityprovider.model.InitiateAuthRequest
 
 internal class FetchAuthSessionOperation(
         private val credentialStorage: CredentialStorage,
-        private val cognito: CognitoIdentityProviderClient,
+        private val cognito: Cognito,
         private val clientId: String,
         private val clientSecret: String,
         private val onSuccess: Consumer<AuthSession>,
@@ -42,11 +41,11 @@ internal class FetchAuthSessionOperation(
             "REFRESH_TOKEN" to credentialStorage.refreshToken(),
             "SECRET_HASH" to clientSecret // Surprising, huh? I was surprised, too, Cognito.
         )
-        val request = InitiateAuthRequest.builder()
-            .authFlow(REFRESH_TOKEN_AUTH)
-            .clientId(clientId)
-            .authParameters(parameters)
-            .build()
+        val request = InitiateAuthRequest(
+            authFlow = "REFRESH_TOKEN_AUTH",
+            clientId = clientId,
+            authParameters = parameters
+        )
         val response = cognito.initiateAuth(request)
         val authenticationResult = response.authenticationResult()
         credentialStorage.clear()
