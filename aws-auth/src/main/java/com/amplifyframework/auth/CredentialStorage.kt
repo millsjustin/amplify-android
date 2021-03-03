@@ -11,7 +11,7 @@ interface CredentialStorage {
 
     fun idToken(token: String)
 
-    fun refreshToken(token: String)
+    fun refreshToken(token: String?)
 
     fun expiresIn(period: Int)
 

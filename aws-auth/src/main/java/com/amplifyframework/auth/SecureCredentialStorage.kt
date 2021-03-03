@@ -47,8 +47,12 @@ class SecureCredentialStorage(context: Context): CredentialStorage {
         return getString(Key.ID_TOKEN)
     }
 
-    override fun refreshToken(token: String) {
-        store(Key.REFRESH_TOKEN, token)
+    override fun refreshToken(token: String?) {
+        if (token != null) {
+            store(Key.REFRESH_TOKEN, token)
+        } else {
+            prefs.edit().remove(Key.REFRESH_TOKEN.name).commit()
+        }
     }
 
     override fun refreshToken(): String {

@@ -3,6 +3,7 @@ package com.amplifyframework.auth.sample
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.amplifyframework.auth.sample.databinding.ActivityConfirmSignUpBinding
@@ -10,7 +11,6 @@ import com.amplifyframework.kotlin.core.Amplify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 
 class ConfirmSignUpActivity : AppCompatActivity() {
     private lateinit var view: ActivityConfirmSignUpBinding
@@ -27,7 +27,7 @@ class ConfirmSignUpActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val code = view.codeEntry.text.toString()
             val result = withContext(Dispatchers.IO) {
-                Timber.tag("ConfirmSignUp").e("username = $username, code=$code")
+                Log.i("ConfirmSignUp", "username = $username, code=$code")
                 Amplify.Auth.confirmSignUp(username, code)
             }
             if (result.isSignUpComplete) {

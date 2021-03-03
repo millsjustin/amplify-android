@@ -1,7 +1,9 @@
 package com.amplifyframework.auth.client
 
+import android.util.Log
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
@@ -49,7 +51,7 @@ internal class Cognito(private val endpoint: String = "https://cognito-identity.
                         refreshToken = authResultJson.getString("RefreshToken"),
                         tokenType = authResultJson.getString("TokenType")
                 ),
-                hasChallengeParameters = !challengeParameters.isEmpty()
+                hasChallengeParameters = challengeParameters.isNotEmpty()
         )
     }
 
@@ -84,14 +86,32 @@ internal class Cognito(private val endpoint: String = "https://cognito-identity.
         conn.doOutput = true
 
         val input = json.toString().toByteArray()
-        conn.outputStream.write(input, 0, input.length)
+        conn.outputStream.write(input, 0, input.size)
 
-        val reader = BufferedReader(InputStreamReader(conn.inputStream))
-        val response = StringBuilder()
-        var responseLine: String? = null
-        while ((responseLine = reader.readLine()) != null) {
-            response.append(responseLine.trim())
+        if (conn.responseCode < 200 || conn.responseCode > 399) {
+            throw ResponseError(conn.responseCode, readStream(conn.errorStream))
+        } else {
+            val response = JSONObject(readStream(conn.inputStream))
+            Log.i("Cognito", response.toString())
+            return response
         }
-        return JSONObject(response.toString())
+    }
+
+    private fun readStream(stream: InputStream): String {
+        val reader = BufferedReader(InputStreamReader(stream))
+        val response = StringBuilder()
+        var responseLine: String? = reader.readLine()
+        while (responseLine != null) {
+            response.append(responseLine.trim())
+            responseLine = reader.readLine()
+        }
+        return response.toString()
+    }
+
+    class ResponseError(code: Int, message: String) : Exception(message)
+
+    private fun sign() {
+        val method = 'POST'
+        val service = ''
     }
 }

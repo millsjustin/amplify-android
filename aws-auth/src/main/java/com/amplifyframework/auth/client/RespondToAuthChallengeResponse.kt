@@ -1,5 +1,5 @@
 package com.amplifyframework.auth.client
 
-class RespondToAuthChallengeResponse(val authenticationResult: AuthenticationResult, challengeName: String) {
-
-}
+internal data class RespondToAuthChallengeResponse(
+        internal val authenticationResult: AuthenticationResult,
+        internal val challengeName: String)

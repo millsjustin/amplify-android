@@ -1,3 +1,8 @@
 package com.amplifyframework.auth.client
 
-class InitiateAuthResponse(val challengeParameters: Map<String, String>, val authenticationResult: AuthenticationResult, val hasChallengeParameters: Boolean, val challengeName: String, val session: Any)
+internal data class InitiateAuthResponse(
+        internal val challengeParameters: Map<String, String>,
+        internal val authenticationResult: AuthenticationResult,
+        internal val hasChallengeParameters: Boolean,
+        internal val challengeName: String,
+        internal val session: String)

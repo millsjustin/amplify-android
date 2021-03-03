@@ -37,8 +37,9 @@ internal class FetchAuthSessionOperation(
 
     private fun refresh() {
         Log.i("FetchAuthSession", "Refreshing token...")
+        val refreshToken = credentialStorage.refreshToken()
         val parameters = mapOf(
-            "REFRESH_TOKEN" to credentialStorage.refreshToken(),
+            "REFRESH_TOKEN" to refreshToken,
             "SECRET_HASH" to clientSecret // Surprising, huh? I was surprised, too, Cognito.
         )
         val request = InitiateAuthRequest(
@@ -47,14 +48,16 @@ internal class FetchAuthSessionOperation(
             authParameters = parameters
         )
         val response = cognito.initiateAuth(request)
-        val authenticationResult = response.authenticationResult()
+        val authenticationResult = response.authenticationResult
         credentialStorage.clear()
-        if (authenticationResult.refreshToken() != null) {
-            credentialStorage.refreshToken(authenticationResult.refreshToken())
+        if (authenticationResult.refreshToken != null) {
+            credentialStorage.refreshToken(authenticationResult.refreshToken)
+        } else {
+            credentialStorage.refreshToken(refreshToken)
         }
-        credentialStorage.accessToken(authenticationResult.accessToken())
-        credentialStorage.idToken(authenticationResult.idToken())
-        credentialStorage.expiresIn(authenticationResult.expiresIn())
-        credentialStorage.tokenType(authenticationResult.tokenType())
+        credentialStorage.accessToken(authenticationResult.accessToken)
+        credentialStorage.idToken(authenticationResult.idToken)
+        credentialStorage.expiresIn(authenticationResult.expiresIn)
+        credentialStorage.tokenType(authenticationResult.tokenType)
     }
 }

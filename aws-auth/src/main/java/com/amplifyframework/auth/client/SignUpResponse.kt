@@ -1,7 +1,7 @@
 package com.amplifyframework.auth.client
 
-data class SignUpResponse(
-        val userConfirmed: Boolean,
-        val codeDeliveryDetails: CodeDeliveryDetails,
-        val userSub: String
+internal data class SignUpResponse(
+        internal val userConfirmed: Boolean,
+        internal val codeDeliveryDetails: CodeDeliveryDetails,
+        internal val userSub: String
 )
