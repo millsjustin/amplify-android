@@ -43,7 +43,6 @@ class SignUpActivity : AppCompatActivity() {
     }
 }
 
-
 fun goToSignUp(source: Activity) {
     val signUpIntent = Intent(source, SignUpActivity::class.java)
     source.startActivity(signUpIntent)

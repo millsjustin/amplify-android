@@ -13,28 +13,28 @@ import com.amplifyframework.auth.result.AuthSignInResult
 import com.amplifyframework.auth.result.step.AuthNextSignInStep
 import com.amplifyframework.auth.result.step.AuthSignInStep.DONE
 import com.amplifyframework.core.Consumer
+import java.math.BigInteger
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.math.BigInteger
-import java.text.SimpleDateFormat
-import java.util.TimeZone
-import java.util.Locale
-import java.util.Date
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 
 internal class SignInOperation(
-        private val cognito: Cognito,
-        private val credentialStorage: CredentialStorage,
-        private val clientId: String,
-        private val clientSecret: String,
-        private val poolId: String,
-        private val username: String,
-        private val password: String,
-        private val options: AuthSignInOptions,
-        private val onSuccess: Consumer<AuthSignInResult>,
-        private val onError: Consumer<AuthException>
+    private val cognito: Cognito,
+    private val credentialStorage: CredentialStorage,
+    private val clientId: String,
+    private val clientSecret: String,
+    private val poolId: String,
+    private val username: String,
+    private val password: String,
+    private val options: AuthSignInOptions,
+    private val onSuccess: Consumer<AuthSignInResult>,
+    private val onError: Consumer<AuthException>
 ) {
     private val helper = AuthenticationHelper(poolId)
 
@@ -50,19 +50,23 @@ internal class SignInOperation(
 
     private fun callCognito(): AuthSignInResult {
         @Suppress("UsePropertyAccessSyntax") // getA() is NOT "a"!!!!!!
-        val response = cognito.initiateAuth(InitiateAuthRequest(
-            clientId = clientId,
-            authFlow = "USER_SRP_AUTH",
-            authParameters = mapOf(
-                "USERNAME" to username,
-                "SRP_A" to helper.getA().toString(16),
-                "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret)
+        val response = cognito.initiateAuth(
+            InitiateAuthRequest(
+                clientId = clientId,
+                authFlow = "USER_SRP_AUTH",
+                authParameters = mapOf(
+                    "USERNAME" to username,
+                    "SRP_A" to helper.getA().toString(16),
+                    "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret)
+                )
             )
-        ))
+        )
         Log.w("InitiateAuth", response.toString())
 
         if (!response.hasChallengeParameters) {
-            storeCredentials(response.authenticationResult)
+            if (response.authenticationResult != null) {
+                storeCredentials(response.authenticationResult)
+            }
             val details = AuthCodeDeliveryDetails("TODO: what is this field, actually?", EMAIL)
             val nextStep = AuthNextSignInStep(DONE, emptyMap(), details)
             return AuthSignInResult(true, nextStep)
@@ -76,7 +80,9 @@ internal class SignInOperation(
                 return AuthSignInResult(true, nextStep)
             }
             else -> {
-                throw AuthException("Unknown challenge = ${response.challengeName}", "Implement it!")
+                throw AuthException(
+                    "Unknown challenge = ${response.challengeName}", "Implement it!"
+                )
             }
         }
     }
@@ -84,7 +90,7 @@ internal class SignInOperation(
     private fun verifyPassword(password: String, initAuthResponse: InitiateAuthResponse) {
         Log.i("SignIn", "verifying password from $initAuthResponse")
 
-        val challengeParameters = initAuthResponse.challengeParameters
+        val challengeParameters = initAuthResponse.challengeParameters!!
         val salt = BigInteger(challengeParameters["SALT"]!!, 16)
         val secretBlock = challengeParameters["SECRET_BLOCK"]!!
         val userIdForSrp = challengeParameters["USER_ID_FOR_SRP"]!!
@@ -96,7 +102,7 @@ internal class SignInOperation(
         val claimSignature = claimSignature(userIdForSrp, key, timestamp, secretBlock)
 
         val request = RespondToAuthChallengeRequest(
-            challengeName = initAuthResponse.challengeName,
+            challengeName = initAuthResponse.challengeName!!,
             clientId = clientId,
             challengeResponses = mapOf(
                 "SECRET_HASH" to SecretHash.of(username, clientId, clientSecret),

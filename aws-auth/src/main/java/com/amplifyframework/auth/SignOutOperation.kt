@@ -8,10 +8,11 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 internal class SignOutOperation(
-        private val client: Cognito,
-        private val credentialStorage: CredentialStorage,
-        private val onSuccess: Action,
-        private val onError: Consumer<AuthException>) {
+    private val client: Cognito,
+    private val credentialStorage: CredentialStorage,
+    private val onSuccess: Action,
+    private val onError: Consumer<AuthException>
+) {
     fun start() {
         GlobalScope.launch(Dispatchers.IO) {
             try {

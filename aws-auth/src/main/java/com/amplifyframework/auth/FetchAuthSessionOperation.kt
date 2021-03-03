@@ -11,12 +11,13 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 internal class FetchAuthSessionOperation(
-        private val credentialStorage: CredentialStorage,
-        private val cognito: Cognito,
-        private val clientId: String,
-        private val clientSecret: String,
-        private val onSuccess: Consumer<AuthSession>,
-        private val onError: Consumer<AuthException>) {
+    private val credentialStorage: CredentialStorage,
+    private val cognito: Cognito,
+    private val clientId: String,
+    private val clientSecret: String,
+    private val onSuccess: Consumer<AuthSession>,
+    private val onError: Consumer<AuthException>
+) {
     internal fun start() {
         GlobalScope.launch(Dispatchers.IO) {
             if (credentialStorage.isEmpty()) {
@@ -48,7 +49,7 @@ internal class FetchAuthSessionOperation(
             authParameters = parameters
         )
         val response = cognito.initiateAuth(request)
-        val authenticationResult = response.authenticationResult
+        val authenticationResult = response.authenticationResult!!
         credentialStorage.clear()
         if (authenticationResult.refreshToken != null) {
             credentialStorage.refreshToken(authenticationResult.refreshToken)

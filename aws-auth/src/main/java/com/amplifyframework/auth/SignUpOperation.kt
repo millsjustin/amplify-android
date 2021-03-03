@@ -14,14 +14,14 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 internal class SignUpOperation(
-        private val cognito: Cognito,
-        private val clientId: String,
-        private val clientSecret: String,
-        private val username: String,
-        private val password: String,
-        private val options: AuthSignUpOptions,
-        private val onSuccess: Consumer<AuthSignUpResult>,
-        private val onError: Consumer<AuthException>
+    private val cognito: Cognito,
+    private val clientId: String,
+    private val clientSecret: String,
+    private val username: String,
+    private val password: String,
+    private val options: AuthSignUpOptions,
+    private val onSuccess: Consumer<AuthSignUpResult>,
+    private val onError: Consumer<AuthException>
 ) {
     internal fun start() {
         GlobalScope.launch(Dispatchers.IO) {
@@ -48,13 +48,13 @@ internal class SignUpOperation(
         val details = response.codeDeliveryDetails
         val destination = details.destination
         val deliveryMedium = AuthCodeDeliveryDetails.DeliveryMedium.fromString(
-                details.deliveryMedium
+            details.deliveryMedium
         )
         val attributeName = details.attributeName
         val codeDeliveryDetails = AuthCodeDeliveryDetails(
-                destination,
-                deliveryMedium,
-                attributeName
+            destination,
+            deliveryMedium,
+            attributeName
         )
 
         // Build result contents

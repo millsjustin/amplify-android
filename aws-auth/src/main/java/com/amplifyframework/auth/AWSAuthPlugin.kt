@@ -91,13 +91,24 @@ class AWSAuthPlugin : NotImplementedAuthPlugin<Unit>() {
     }
 
     override fun fetchAuthSession(
-            onSuccess: Consumer<AuthSession>,
-            onError: Consumer<AuthException>,
+        onSuccess: Consumer<AuthSession>,
+        onError: Consumer<AuthException>,
     ) {
-        FetchAuthSessionOperation(credentialStorage, client, clientId, clientSecret, onSuccess, onError).start()
+        FetchAuthSessionOperation(
+            credentialStorage,
+            client,
+            clientId,
+            clientSecret,
+            onSuccess,
+            onError
+        ).start()
     }
 
-    override fun signOut(options: AuthSignOutOptions, onSuccess: Action, onError: Consumer<AuthException>) {
+    override fun signOut(
+        options: AuthSignOutOptions,
+        onSuccess: Action,
+        onError: Consumer<AuthException>
+    ) {
         SignOutOperation(client, credentialStorage, onSuccess, onError).start()
     }
 }

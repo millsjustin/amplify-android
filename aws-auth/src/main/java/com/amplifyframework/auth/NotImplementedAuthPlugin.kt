@@ -117,8 +117,8 @@ abstract class NotImplementedAuthPlugin<T> : AuthPlugin<T>() {
     }
 
     override fun fetchAuthSession(
-            onSuccess: Consumer<AuthSession>,
-            onError: Consumer<AuthException>
+        onSuccess: Consumer<AuthSession>,
+        onError: Consumer<AuthException>
     ) {
         TODO("Not yet implemented")
     }

@@ -12,13 +12,13 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 internal class ConfirmSignUpOperation(
-        private val cognito: Cognito,
-        private val clientId: String,
-        private val clientSecret: String,
-        private val username: String,
-        private val confirmationCode: String,
-        private val onSuccess: Consumer<AuthSignUpResult>,
-        private val onError: Consumer<AuthException>
+    private val cognito: Cognito,
+    private val clientId: String,
+    private val clientSecret: String,
+    private val username: String,
+    private val confirmationCode: String,
+    private val onSuccess: Consumer<AuthSignUpResult>,
+    private val onError: Consumer<AuthException>
 ) {
     internal fun start() {
         GlobalScope.launch(Dispatchers.IO) {

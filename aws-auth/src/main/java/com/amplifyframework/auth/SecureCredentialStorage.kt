@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 // TODO: write one that uses encryption, instead.
-class SecureCredentialStorage(context: Context): CredentialStorage {
+class SecureCredentialStorage(context: Context) : CredentialStorage {
     private val masterKey = MasterKey.Builder(context, "amplify_auth_storage_key_alias")
         .setKeyScheme(KeyScheme.AES256_GCM)
         .build()
