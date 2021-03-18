@@ -55,6 +55,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import okhttp3.Call;
@@ -138,6 +139,12 @@ public final class AWSApiPlugin extends ApiPlugin<Map<String, OkHttpClient>> {
             final ApiConfiguration apiConfiguration = entry.getValue();
             final EndpointType endpointType = apiConfiguration.getEndpointType();
             final OkHttpClient.Builder builder = new OkHttpClient.Builder();
+
+            // Both AppSync and API Gateway have a 30 second timeout per request, so override the default OkHttpClient 10
+            // second readTimeout.
+            // AppSync: https://docs.aws.amazon.com/general/latest/gr/appsync.html
+            // API Gateway: https://docs.aws.amazon.com/apigateway/latest/developerguide/limits.html
+            builder.readTimeout(30, TimeUnit.SECONDS);
             builder.addNetworkInterceptor(UserAgentInterceptor.using(UserAgent::string));
             builder.eventListener(new ApiConnectionEventListener());
             if (apiConfiguration.getAuthorizationType() != AuthorizationType.NONE) {
