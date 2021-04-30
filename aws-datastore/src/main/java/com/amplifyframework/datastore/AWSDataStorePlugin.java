@@ -38,6 +38,7 @@ import com.amplifyframework.core.model.query.predicate.QueryPredicate;
 import com.amplifyframework.core.model.query.predicate.QueryPredicates;
 import com.amplifyframework.datastore.appsync.AppSyncClient;
 import com.amplifyframework.datastore.appsync.SerializedModel;
+import com.amplifyframework.datastore.debug.DataStoreDebugger;
 import com.amplifyframework.datastore.model.ModelProviderLocator;
 import com.amplifyframework.datastore.storage.ItemChangeMapper;
 import com.amplifyframework.datastore.storage.LocalStorageAdapter;
@@ -199,6 +200,9 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
                     "be sure you are only calling Amplify.configure once"
             );
         }
+
+        // Start the debugger.
+        DataStoreDebugger.instance().showNotification(context);
 
         HubChannel hubChannel = HubChannel.forCategoryType(getCategoryType());
         Amplify.Hub.subscribe(hubChannel,

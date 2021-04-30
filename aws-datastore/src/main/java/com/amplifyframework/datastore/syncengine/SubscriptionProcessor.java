@@ -38,6 +38,8 @@ import com.amplifyframework.datastore.appsync.AppSyncExtensions;
 import com.amplifyframework.datastore.appsync.AppSyncExtensions.AppSyncErrorType;
 import com.amplifyframework.datastore.appsync.ModelWithMetadata;
 import com.amplifyframework.datastore.appsync.SerializedModel;
+import com.amplifyframework.datastore.debug.DataStoreDebugger;
+import com.amplifyframework.datastore.debug.EventType;
 import com.amplifyframework.hub.HubChannel;
 import com.amplifyframework.hub.HubEvent;
 import com.amplifyframework.logging.Logger;
@@ -55,6 +57,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.ReplaySubject;
 
@@ -125,6 +128,7 @@ final class SubscriptionProcessor {
             for (SubscriptionType subscriptionType : SubscriptionType.values()) {
                 subscriptions.add(subscriptionObservable(appSync, subscriptionType, latch, modelSchema));
             }
+            DataStoreDebugger.instance().startEvent(modelSchema.getName(), EventType.SUBSCRIPTION);
         }
 
         ongoingOperationsDisposable.add(Observable.merge(subscriptions)
@@ -184,6 +188,7 @@ final class SubscriptionProcessor {
                     LOG.debug("Subscription started for " + subscriptionType.name() + " " + modelSchema.getName() +
                             " subscriptionId: " + token);
                     subscriptionId.set(token);
+                    DataStoreDebugger.instance().finishEvent(modelSchema.getName());
                     latch.countDown();
                 },
                 emitter::onNext,
@@ -199,6 +204,10 @@ final class SubscriptionProcessor {
                         // unless you have consulted with AWS.  It is subject to be deprecated/removed in the future.
                         latch.countDown();
                         LOG.warn("Operation disabled:" + subscriptionType.name() + " " + modelSchema.getName());
+                    } else if (isNotSignedInError(dataStoreException)) {
+                        // Ignore not signed in errors, so that models that don't require auth can still be used.
+                        latch.countDown();
+                        LOG.warn("Not signed in failure:" + subscriptionType.name() + " " + modelSchema.getName());
                     } else {
                         if (latch.getCount() > 0) {
                             // An error occurred during startup.  Abort and notify the Orchestrator by throwing the
@@ -236,6 +245,10 @@ final class SubscriptionProcessor {
             .modelSchema(modelSchema)
             .build()
         );
+    }
+
+    private boolean isNotSignedInError(DataStoreException dataStoreException) {
+        return "You must be signed-in with Cognito Userpools to be able to use getTokens".equals(dataStoreException.getCause().getMessage());
     }
 
     /**

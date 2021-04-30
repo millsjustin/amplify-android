@@ -18,6 +18,7 @@ package com.amplifyframework.datastore.syncengine;
 import androidx.annotation.NonNull;
 
 import com.amplifyframework.api.graphql.GraphQLRequest;
+import com.amplifyframework.api.graphql.GraphQLResponse;
 import com.amplifyframework.api.graphql.PaginatedResult;
 import com.amplifyframework.core.Amplify;
 import com.amplifyframework.core.Consumer;
@@ -33,12 +34,17 @@ import com.amplifyframework.datastore.DataStoreConfigurationProvider;
 import com.amplifyframework.datastore.DataStoreErrorHandler;
 import com.amplifyframework.datastore.DataStoreException;
 import com.amplifyframework.datastore.appsync.AppSync;
+import com.amplifyframework.datastore.appsync.AppSyncExtensions;
 import com.amplifyframework.datastore.appsync.ModelWithMetadata;
 import com.amplifyframework.datastore.appsync.SerializedModel;
+import com.amplifyframework.datastore.debug.DataStoreDebugger;
+import com.amplifyframework.datastore.debug.EventState;
+import com.amplifyframework.datastore.debug.EventType;
 import com.amplifyframework.datastore.events.SyncQueriesStartedEvent;
 import com.amplifyframework.hub.HubChannel;
 import com.amplifyframework.hub.HubEvent;
 import com.amplifyframework.logging.Logger;
+import com.amplifyframework.util.Empty;
 import com.amplifyframework.util.ForEach;
 import com.amplifyframework.util.Time;
 
@@ -123,9 +129,11 @@ final class SyncProcessor {
                         new SyncQueriesStartedEvent(modelNames)
                     )
                 );
+                DataStoreDebugger.instance().setSyncEngineState(EventState.IN_PROGRESS);
             })
             .doOnComplete(() -> {
                 // When the Completable completes, then emit syncQueriesReady.
+                DataStoreDebugger.instance().setSyncEngineState(EventState.SUCCESS);
                 Amplify.Hub.publish(HubChannel.DATASTORE,
                     HubEvent.create(DataStoreChannelEventName.SYNC_QUERIES_READY));
             });
@@ -160,14 +168,19 @@ final class SyncProcessor {
                 LOG.warn("Initial cloud sync failed.", failureToSync);
                 DataStoreErrorHandler dataStoreErrorHandler =
                     dataStoreConfigurationProvider.getConfiguration().getErrorHandler();
-                dataStoreErrorHandler.accept(new DataStoreException(
-                    "Initial cloud sync failed.", failureToSync,
-                    "Check your internet connection."
-                ));
+                DataStoreException dataStoreException = new DataStoreException(
+                        "Initial cloud sync failed.", failureToSync,
+                        "Check your internet connection."
+                );
+                dataStoreErrorHandler.accept(dataStoreException);
+                DataStoreDebugger.instance().errorEvent(schema.getName(), dataStoreException);
+                DataStoreDebugger.instance().setSyncEngineState(EventState.ERROR);
             })
-            .doOnComplete(() ->
-                LOG.info("Successfully sync'd down model state from cloud.")
-            );
+            .doOnSubscribe(disposable -> DataStoreDebugger.instance().startEvent(schema.getName(), EventType.SYNC))
+            .doOnComplete(() -> {
+                DataStoreDebugger.instance().finishEvent(schema.getName());
+                LOG.info("Successfully sync'd down model state from cloud.");
+            });
     }
 
     /**
@@ -228,6 +241,28 @@ final class SyncProcessor {
                     } else {
                         processor.onComplete();
                     }
+                }).onErrorComplete(dataStoreException -> {
+                    if (isExceptionType(dataStoreException, AppSyncExtensions.AppSyncErrorType.UNAUTHORIZED)) {
+                        // Ignore Unauthorized errors, so that DataStore can still be used even if the user is only
+                        // authorized to read a subset of the models.
+                        LOG.warn("Unauthorized failure.");
+                        return true;
+                    } else if (isExceptionType(dataStoreException, AppSyncExtensions.AppSyncErrorType.OPERATION_DISABLED)) {
+                        // Ignore OperationDisabled errors, so that DataStore can be used even without subscriptions.
+                        // This logic is only in place to address a specific use case, and should not be used without
+                        // unless you have consulted with AWS.  It is subject to be deprecated/removed in the future.
+                        LOG.warn("Operation disabled.");
+                        return true;
+                    } else if (isNotSignedInError(dataStoreException)) {
+                        // Ignore not signed in errors, so that models that don't require auth can still be used.
+                        LOG.warn("Not signed in failure.");
+                        return true;
+                    } else if (dataStoreException instanceof DataStoreException.GraphQLResponseException) {
+                        LOG.warn("GraphQLResponse exception");
+                        DataStoreDebugger.instance().errorEvent(schema.getName(), (DataStoreException) dataStoreException);
+                        return true;
+                    }
+                    return false;
                 })
                 // If it's a SerializedModel, add the ModelSchema, since it isn't added during deserialization.
                 .map(paginatedResult -> Flowable.fromIterable(paginatedResult)
@@ -264,10 +299,14 @@ final class SyncProcessor {
         return Single.create(emitter -> {
             Cancelable cancelable = appSync.sync(request, result -> {
                 if (result.hasErrors()) {
-                    emitter.onError(new DataStoreException(
-                            String.format("A model sync failed: %s", result.getErrors()),
-                            "Check your schema."
-                    ));
+                    if(result.hasData()) {
+                        emitter.onError(new DataStoreException.GraphQLResponseException("There was a GraphQLResponse error", result.getErrors()));
+                    } else {
+                        emitter.onError(new DataStoreException(
+                                String.format("A model sync failed: %s", result.getErrors()),
+                                "Check your schema."
+                        ));
+                    }
                 } else if (!result.hasData()) {
                     emitter.onError(new DataStoreException(
                             "Empty response from AppSync.", "Report to AWS team."
@@ -278,6 +317,26 @@ final class SyncProcessor {
             }, emitter::onError);
             emitter.setDisposable(AmplifyDisposables.fromCancelable(cancelable));
         });
+    }
+
+    private boolean isNotSignedInError(Throwable throwable) {
+        if(throwable.getCause() != null && throwable.getCause().getCause() != null) {
+            return "You must be signed-in with Cognito Userpools to be able to use getTokens".equals(throwable.getCause().getCause().getMessage());
+        }
+        return false;
+    }
+
+    private boolean isExceptionType(Throwable throwable, AppSyncExtensions.AppSyncErrorType errorType) {
+        if (throwable instanceof DataStoreException.GraphQLResponseException) {
+            List<GraphQLResponse.Error> errors = ((DataStoreException.GraphQLResponseException) throwable).getErrors();
+            GraphQLResponse.Error firstError = errors.get(0);
+            if (Empty.check(firstError.getExtensions())) {
+                return false;
+            }
+            AppSyncExtensions extensions = new AppSyncExtensions(firstError.getExtensions());
+            return errorType.equals(extensions.getErrorType());
+        }
+        return false;
     }
 
     /**

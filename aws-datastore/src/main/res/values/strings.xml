@@ -13,4 +13,7 @@
    express or implied. See the License for the specific language governing
    permissions and limitations under the License.
 -->
-<resources />
+<resources >
+    <string name="channel_name">DataStoreDebuggerChannel</string>
+    <string name="channel_description">Channel used for displaying datastore debugger tray item</string>
+</resources>
