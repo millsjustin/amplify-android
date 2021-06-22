@@ -143,6 +143,10 @@ public final class AppSyncGraphQLOperation<R> extends GraphQLOperation<R> {
                 }
             }
 
+            if(response.code() >= 500) {
+                onFailure.accept(new ApiException.ServerErrorException()));
+            }
+
             try {
                 onResponse.accept(wrapResponse(jsonResponse));
                 //TODO: Dispatch to hub
@@ -153,7 +157,7 @@ public final class AppSyncGraphQLOperation<R> extends GraphQLOperation<R> {
 
         @Override
         public void onFailure(@NonNull Call call, @NonNull IOException exception) {
-            onFailure.accept(new ApiException(
+            onFailure.accept(new ApiException.NetworkException(
                 "OkHttp client request failed.", exception, "See attached exception for more details."
             ));
         }

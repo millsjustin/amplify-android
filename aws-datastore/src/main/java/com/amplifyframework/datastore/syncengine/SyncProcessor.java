@@ -17,6 +17,7 @@ package com.amplifyframework.datastore.syncengine;
 
 import androidx.annotation.NonNull;
 
+import com.amplifyframework.api.ApiException;
 import com.amplifyframework.api.graphql.GraphQLRequest;
 import com.amplifyframework.api.graphql.PaginatedResult;
 import com.amplifyframework.core.Amplify;
@@ -275,7 +276,20 @@ final class SyncProcessor {
                 } else {
                     emitter.onSuccess(result.getData());
                 }
-            }, emitter::onError);
+            }, error -> {
+                if(error instanceof DataStoreException.GraphQLResponseException) {
+                    // AppSync error, so don't retry.
+                    emitter.onError(error);
+                } else if(/*error is DataStoreException wrapping an ApiException, wrapping a IOException*/){
+                    //retry
+                } else if(error instanceof ApiException.ServerErrorException) {
+                    // retry
+                } else {
+                    // Don't retry
+                    emitter.onError(error);
+                }
+
+            });
             emitter.setDisposable(AmplifyDisposables.fromCancelable(cancelable));
         });
     }
