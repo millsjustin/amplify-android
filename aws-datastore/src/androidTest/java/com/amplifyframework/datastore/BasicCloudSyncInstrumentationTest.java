@@ -238,4 +238,43 @@ public final class BasicCloudSyncInstrumentationTest {
         BlogOwner remoteRichard = api.get(BlogOwner.class, richard.getId());
         ModelAssert.assertEqualsIgnoringTimestamps(updatedRichard, remoteRichard);
     }
+
+    /**
+     * Create new Post, then immediately update with a different field.
+     */
+    @Test
+    public void createThenUpdateDifferentField() {
+
+    }
+
+    @Test
+    public void create1ThenCreate2ThenUpdate2() {
+
+    }
+
+    @Test
+    public void createWaitThenUpdate10Times() {
+
+    }
+
+    @Test
+    public void createThenDelete() {
+
+    }
+
+    @Test
+    public void createPost1WithCommentThenReassignCommentToPost2() {
+
+    }
+
+    @Test
+    public void createWaitThenUpdate10TimesWithPredicate() {
+
+    }
+
+    @Test
+    public void createPostThenUpdateThenWaitThenUpdate() {
+
+    }
+
 }
