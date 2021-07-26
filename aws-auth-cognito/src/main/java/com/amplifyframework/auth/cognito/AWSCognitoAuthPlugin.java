@@ -718,6 +718,39 @@ public final class AWSCognitoAuthPlugin extends AuthPlugin<AWSMobileClient> {
     }
 
     @Override
+    public void confirmResetPassword(@NonNull String username,
+                                     @NonNull String newPassword,
+                                     @NonNull String confirmationCode,
+                                     @NonNull Action onSuccess,
+                                     @NonNull Consumer<AuthException> onException) {
+        awsMobileClient.confirmForgotPassword(
+                username,
+                newPassword,
+                confirmationCode,
+                new Callback<ForgotPasswordResult>() {
+                    @Override
+                    public void onResult(ForgotPasswordResult result) {
+                        if (result.getState().equals(ForgotPasswordState.DONE)) {
+                            onSuccess.call();
+                        } else {
+                            onException.accept(new AuthException(
+                                    "Received an unsupported response while confirming password recovery code: "
+                                            + result.getState(),
+                                    "This is almost certainly a bug. Please report it as an issue in our GitHub repo."
+                            ));
+                        }
+                    }
+
+                    @Override
+                    public void onError(Exception error) {
+                        onException.accept(CognitoAuthExceptionConverter.lookup(
+                                error, "Confirm reset password failed."));
+                    }
+                }
+        );
+    }
+
+    @Override
     public void updatePassword(
             @NonNull String oldPassword,
             @NonNull String newPassword,

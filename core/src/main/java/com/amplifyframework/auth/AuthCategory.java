@@ -238,6 +238,17 @@ public final class AuthCategory extends Category<AuthPlugin<?>> implements AuthC
     }
 
     @Override
+    public void confirmResetPassword(
+            @NonNull String username,
+            @NonNull String newPassword,
+            @NonNull String confirmationCode,
+            @NonNull Action onSuccess,
+            @NonNull Consumer<AuthException> onError
+    ) {
+        getSelectedPlugin().confirmResetPassword(newPassword, confirmationCode, onSuccess, onError);
+    }
+
+    @Override
     public void updatePassword(
             @NonNull String oldPassword,
             @NonNull String newPassword,
