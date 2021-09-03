@@ -173,7 +173,10 @@ public final class AWSApiPlugin extends ApiPlugin<Map<String, OkHttpClient>> {
                 final SubscriptionAuthorizer subscriptionAuthorizer =
                     new SubscriptionAuthorizer(apiConfiguration, authProvider);
                 final SubscriptionEndpoint subscriptionEndpoint =
-                    new SubscriptionEndpoint(apiConfiguration, gqlResponseFactory, subscriptionAuthorizer);
+                        new SubscriptionEndpoint(apiConfiguration,
+                                gqlResponseFactory,
+                                subscriptionAuthorizer,
+                                executorService);
                 clientDetails = new ClientDetails(apiConfiguration,
                                                   okHttpClientBuilder.build(),
                                                   subscriptionEndpoint,

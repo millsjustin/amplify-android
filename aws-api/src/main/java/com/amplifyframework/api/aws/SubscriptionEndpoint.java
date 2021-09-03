@@ -45,6 +45,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -71,18 +72,21 @@ final class SubscriptionEndpoint {
     private final TimeoutWatchdog timeoutWatchdog;
     private final Set<String> pendingSubscriptionIds;
     private final OkHttpClient okHttpClient;
+    private final ExecutorService executorService;
     private WebSocket webSocket;
     private AmplifyWebSocketListener webSocketListener;
 
     SubscriptionEndpoint(
             @NonNull ApiConfiguration apiConfiguration,
             @NonNull GraphQLResponse.Factory responseFactory,
-            @NonNull SubscriptionAuthorizer authorizer
+            @NonNull SubscriptionAuthorizer authorizer,
+            @NonNull ExecutorService executorService
     ) throws ApiException {
         this.apiConfiguration = Objects.requireNonNull(apiConfiguration);
         this.subscriptions = new ConcurrentHashMap<>();
         this.responseFactory = Objects.requireNonNull(responseFactory);
         this.authorizer = Objects.requireNonNull(authorizer);
+        this.executorService = Objects.requireNonNull(executorService);
         this.timeoutWatchdog = new TimeoutWatchdog();
         this.pendingSubscriptionIds = Collections.synchronizedSet(new HashSet<>());
         this.okHttpClient = new OkHttpClient.Builder()
@@ -494,11 +498,13 @@ final class SubscriptionEndpoint {
 
         @Override
         public void onMessage(@NonNull final WebSocket webSocket, @NonNull final String message) {
-            try {
-                processJsonMessage(webSocket, message);
-            } catch (ApiException exception) {
-                notifyError(exception);
-            }
+            executorService.submit(() -> {
+                try {
+                    processJsonMessage(webSocket, message);
+                } catch (ApiException exception) {
+                    notifyError(exception);
+                }
+            });
         }
 
         @Override

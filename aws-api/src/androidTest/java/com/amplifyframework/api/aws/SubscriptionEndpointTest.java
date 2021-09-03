@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
@@ -46,7 +46,7 @@ import static org.junit.Assert.assertNotNull;
  * Tests the {@link SubscriptionEndpoint}.
  */
 public final class SubscriptionEndpointTest {
-    private Executor executor;
+    private ExecutorService executor;
     private SubscriptionEndpoint subscriptionEndpoint;
     private String eventId;
     private Set<String> subscriptionIdsForRelease;
@@ -71,7 +71,7 @@ public final class SubscriptionEndpointTest {
 
         final GraphQLResponse.Factory responseFactory = new GsonGraphQLResponseFactory();
         final SubscriptionAuthorizer authorizer = new SubscriptionAuthorizer(apiConfiguration);
-        this.subscriptionEndpoint = new SubscriptionEndpoint(apiConfiguration, responseFactory, authorizer);
+        this.subscriptionEndpoint = new SubscriptionEndpoint(apiConfiguration, responseFactory, authorizer, executor);
 
         this.eventId = RandomString.string();
         this.subscriptionIdsForRelease = new HashSet<>();
