@@ -100,7 +100,9 @@ ext {
             polly: "com.amazonaws:aws-android-sdk-polly:$awsSdkVersion",
             rekognition: "com.amazonaws:aws-android-sdk-rekognition:$awsSdkVersion",
             textract: "com.amazonaws:aws-android-sdk-textract:$awsSdkVersion",
-            translate: "com.amazonaws:aws-android-sdk-translate:$awsSdkVersion"
+            translate: "com.amazonaws:aws-android-sdk-translate:$awsSdkVersion",
+            pinpointjava: "software.amazon.awssdk:pinpoint:2.17.42",
+            httpclient: 'software.amazon.awssdk:url-connection-client:2.13.49'
         ],
         kotlin: [
             stdlib: 'org.jetbrains.kotlin:kotlin-stdlib:1.4.31',

@@ -20,7 +20,8 @@ apply from: rootProject.file("configuration/publishing.gradle")
 dependencies {
     implementation project(path: ':core')
     implementation dependency.androidx.appcompat
-    implementation dependency.aws.pinpoint
+    implementation dependency.aws.pinpointjava
+    implementation dependency.aws.httpclient
     implementation dependency.aws.mobileclient
 
     testImplementation dependency.junit

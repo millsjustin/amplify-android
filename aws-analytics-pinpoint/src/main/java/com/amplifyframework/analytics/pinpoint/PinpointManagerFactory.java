@@ -24,7 +24,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.mobileconnectors.pinpoint.PinpointConfiguration;
 import com.amazonaws.mobileconnectors.pinpoint.PinpointManager;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.pinpoint.model.ChannelType;
+import software.amazon.awssdk.services.pinpoint.model.ChannelType;
 
 /**
  * Factory class to vend out pinpoint analytics client.
