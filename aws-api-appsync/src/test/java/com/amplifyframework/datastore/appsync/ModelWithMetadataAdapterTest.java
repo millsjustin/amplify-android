@@ -60,10 +60,11 @@ public final class ModelWithMetadataAdapterTest {
     public void adapterCanSerializeMwm() throws JSONException {
         Temporal.Timestamp lastChangedAt = Temporal.Timestamp.now();
         String modelId = UUID.randomUUID().toString();
-        ModelMetadata metadata = new ModelMetadata(modelId, false, 4, lastChangedAt);
         BlogOwner model = BlogOwner.builder()
             .name("Blog Owner")
             .build();
+        ModelMetadata metadata = new ModelMetadata(modelId, model.getModelName(), false, 4, lastChangedAt);
+
         ModelWithMetadata<BlogOwner> mwm = new ModelWithMetadata<>(model, metadata);
 
         String expected = new JSONObject()
@@ -88,7 +89,7 @@ public final class ModelWithMetadataAdapterTest {
             .id("45a5f600-8aa8-41ac-a529-aed75036f5be")
             .build();
         Temporal.Timestamp lastChangedAt = new Temporal.Timestamp(1594858827, TimeUnit.SECONDS);
-        ModelMetadata metadata = new ModelMetadata(model.getId(), false, 3, lastChangedAt);
+        ModelMetadata metadata = new ModelMetadata(model.getId(), model.getModelName(), false, 3, lastChangedAt);
         ModelWithMetadata<BlogOwner> expected = new ModelWithMetadata<>(model, metadata);
 
         // Arrange some JSON, and then try to deserialize it

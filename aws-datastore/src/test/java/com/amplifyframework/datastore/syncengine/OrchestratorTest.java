@@ -87,6 +87,7 @@ public final class OrchestratorTest {
                           .start();
 
         ModelMetadata metadata = new ModelMetadata(susan.getId(),
+                                                   susan.getModelName(),
                                                    false,
                                                    1,
                                                    Temporal.Timestamp.now());

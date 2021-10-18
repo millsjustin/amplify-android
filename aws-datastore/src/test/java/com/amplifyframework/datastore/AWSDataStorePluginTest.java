@@ -268,7 +268,8 @@ public final class AWSDataStorePluginTest {
             int indexOfResponseConsumer = 1;
             Consumer<GraphQLResponse<ModelWithMetadata<Person>>> onResponse =
                     invocation.getArgument(indexOfResponseConsumer);
-            ModelMetadata modelMetadata = new ModelMetadata(person1.getId(), false, 1, Temporal.Timestamp.now());
+            ModelMetadata modelMetadata =
+                new ModelMetadata(person1.getId(), person1.getModelName(), false, 1, Temporal.Timestamp.now());
             ModelWithMetadata<Person> modelWithMetadata = new ModelWithMetadata<>(person1, modelMetadata);
             onResponse.accept(new GraphQLResponse<>(modelWithMetadata, Collections.emptyList()));
             return mock(GraphQLOperation.class);
@@ -283,7 +284,7 @@ public final class AWSDataStorePluginTest {
         Person result1 = synchronousDataStore.get(Person.class, person1.getId());
         assertEquals(person1, result1);
 
-        apiInteractionObserver.await();
+        apiInteractionObserver.await(60, TimeUnit.SECONDS);
         verify(mockApiCategory).mutate(argThat(getMatcherFor(person1)), any(), any());
 
         // Mock responses for person 2
@@ -291,7 +292,8 @@ public final class AWSDataStorePluginTest {
             int indexOfResponseConsumer = 1;
             Consumer<GraphQLResponse<ModelWithMetadata<Person>>> onResponse =
                     invocation.getArgument(indexOfResponseConsumer);
-            ModelMetadata modelMetadata = new ModelMetadata(person2.getId(), false, 1, Temporal.Timestamp.now());
+            ModelMetadata modelMetadata =
+                new ModelMetadata(person2.getId(), person2.getModelName(), false, 1, Temporal.Timestamp.now());
             ModelWithMetadata<Person> modelWithMetadata = new ModelWithMetadata<>(person2, modelMetadata);
             onResponse.accept(new GraphQLResponse<>(modelWithMetadata, Collections.emptyList()));
             return mock(GraphQLOperation.class);
@@ -359,7 +361,8 @@ public final class AWSDataStorePluginTest {
             int indexOfResponseConsumer = 1;
             Consumer<GraphQLResponse<ModelWithMetadata<Person>>> onResponse =
                     invocation.getArgument(indexOfResponseConsumer);
-            ModelMetadata modelMetadata = new ModelMetadata(person1.getId(), false, 1, Temporal.Timestamp.now());
+            ModelMetadata modelMetadata =
+                new ModelMetadata(person1.getId(), person1.getModelName(), false, 1, Temporal.Timestamp.now());
             ModelWithMetadata<Person> modelWithMetadata = new ModelWithMetadata<>(person1, modelMetadata);
             onResponse.accept(new GraphQLResponse<>(modelWithMetadata, Collections.emptyList()));
             return mock(GraphQLOperation.class);
@@ -382,7 +385,8 @@ public final class AWSDataStorePluginTest {
             int indexOfResponseConsumer = 1;
             Consumer<GraphQLResponse<ModelWithMetadata<Person>>> onResponse =
                     invocation.getArgument(indexOfResponseConsumer);
-            ModelMetadata modelMetadata = new ModelMetadata(person2.getId(), false, 1, Temporal.Timestamp.now());
+            ModelMetadata modelMetadata =
+                new ModelMetadata(person2.getId(), person2.getModelName(), false, 1, Temporal.Timestamp.now());
             ModelWithMetadata<Person> modelWithMetadata = new ModelWithMetadata<>(person2, modelMetadata);
             onResponse.accept(new GraphQLResponse<>(modelWithMetadata, Collections.emptyList()));
             return mock(GraphQLOperation.class);

@@ -38,6 +38,7 @@ public final class TestModelWithMetadataInstances {
                 .id("d5b44350-b8e9-4deb-94c2-7fe986d6a0e1")
                 .build(),
             new ModelMetadata("d5b44350-b8e9-4deb-94c2-7fe986d6a0e1",
+                    "BlogOwner",
                     null,
                     3,
                     new Temporal.Timestamp(223344L, TimeUnit.SECONDS))
@@ -49,6 +50,7 @@ public final class TestModelWithMetadataInstances {
                 .id("c0601168-2931-4bc0-bf13-5963cd31f828")
                 .build(),
             new ModelMetadata("c0601168-2931-4bc0-bf13-5963cd31f828",
+                    "BlogOwner",
                     null,
                     11,
                     new Temporal.Timestamp(998877L, TimeUnit.SECONDS))
@@ -62,6 +64,7 @@ public final class TestModelWithMetadataInstances {
                 .id("83ceb757-c8c8-4b6a-bee0-a43afb53a73a")
                 .build(),
             new ModelMetadata("83ceb757-c8c8-4b6a-bee0-a43afb53a73a",
+                    "Post",
                     null,
                     5,
                     new Temporal.Timestamp(123123L, TimeUnit.SECONDS))
@@ -70,6 +73,7 @@ public final class TestModelWithMetadataInstances {
         new ModelWithMetadata<>(
             DRUM_POST.getModel(),
             new ModelMetadata("83ceb757-c8c8-4b6a-bee0-a43afb53a73a",
+                    "Post",
                     Boolean.TRUE,
                     5,
                     new Temporal.Timestamp(123123L, TimeUnit.SECONDS))

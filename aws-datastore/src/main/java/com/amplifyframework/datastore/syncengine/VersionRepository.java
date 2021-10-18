@@ -77,7 +77,10 @@ final class VersionRepository {
             throws DataStoreException {
         final List<ModelMetadata> results = new ArrayList<>();
         while (metadataIterator.hasNext()) {
-            results.add(metadataIterator.next());
+            ModelMetadata metadata = metadataIterator.next();
+            if (model.getModelName().equals(metadata.getItemModelName())) {
+                results.add(metadata);
+            }
         }
 
         // There should be only one metadata for the model....

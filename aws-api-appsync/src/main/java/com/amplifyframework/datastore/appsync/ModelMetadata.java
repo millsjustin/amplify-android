@@ -36,6 +36,7 @@ import java.util.Objects;
 @SuppressWarnings({"MemberName", "ParameterName"})
 public final class ModelMetadata implements Model {
     private final @ModelField(targetType = "ID", isRequired = true) String id;
+    private final @ModelField(targetType = "String", isRequired = true) String itemModelName;
     private final @ModelField(targetType = "Boolean") Boolean _deleted;
     private final @ModelField(targetType = "Int") Integer _version;
     private final @ModelField(targetType = "AWSTimestamp") Temporal.Timestamp _lastChangedAt;
@@ -49,10 +50,12 @@ public final class ModelMetadata implements Model {
      */
     public ModelMetadata(
             @NonNull String id,
+            @NonNull String itemModelName,
             @Nullable Boolean deleted,
             @Nullable Integer version,
             @Nullable Temporal.Timestamp lastChangedAt) {
         this.id = Objects.requireNonNull(id);
+        this.itemModelName = Objects.requireNonNull(itemModelName);
         this._deleted = deleted;
         this._version = version;
         this._lastChangedAt = lastChangedAt;
@@ -65,6 +68,11 @@ public final class ModelMetadata implements Model {
     @NonNull
     public String getId() {
         return id;
+    }
+
+    @NonNull
+    public String getItemModelName() {
+        return itemModelName;
     }
 
     /**
