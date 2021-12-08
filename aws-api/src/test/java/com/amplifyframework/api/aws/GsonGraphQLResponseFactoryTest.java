@@ -49,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 
 /**
  * Unit test for implementation of ResponseFactory.
@@ -317,6 +318,20 @@ public final class GsonGraphQLResponseFactoryTest {
 
         // Assert that the response is expected
         assertEquals(expectedResponse, response);
+    }
+
+    @Test
+    public void errorWithNullMessageThrowsApiException() throws ApiException {
+        // Arrange some JSON string from a "server"
+        final String responseJson = Resources.readAsString("error-null-message.json");
+
+        // Assert that exception is thrown while parsing error with null message
+        Type responseType = TypeMaker.getParameterizedType(PaginatedResult.class, Todo.class);
+        GraphQLRequest<PaginatedResult<Todo>> request = buildDummyRequest(responseType);
+        assertThrows(
+                ApiException.class,
+                () -> responseFactory.buildResponse(request, responseJson)
+        );
     }
 
     /**
