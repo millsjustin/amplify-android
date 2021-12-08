@@ -63,10 +63,10 @@ final class GsonGraphQLResponseFactory implements GraphQLResponse.Factory {
                 .registerTypeHierarchyAdapter(Iterable.class, new IterableDeserializer<>(request))
                 .create();
             return responseGson.fromJson(responseJson, responseType);
-        } catch (JsonSyntaxException jsonSyntaxException) {
+        } catch (JsonParseException jsonParseException) {
             throw new ApiException(
                 "Amplify encountered an error while deserializing an object.",
-                jsonSyntaxException,
+                jsonParseException,
                 AmplifyException.TODO_RECOVERY_SUGGESTION
             );
         }
